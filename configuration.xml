@@ -1,6 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 	<base>GBP</base>
-	<rates>rates.xml</rates>
-	<currencies>https://www.currency-iso.org/dam/downloads/lists/list_one.xml</currencies>
+	<data>
+		<rates>rates.xml</rates>
+		<currencies>currencies.xml</currencies>
+	</data>
+	<sources>
+		<rates>http://query.yahooapis.com/v1/public/yql?q=</rates>
+		<currencies>https://www.currency-iso.org/dam/downloads/lists/list_one.xml</currencies>
+	</sources>
+	<currencies>
+		<currency>CAD</currency>
+		<currency>CHF</currency>
+		<currency>CNY</currency>
+		<currency>DKK</currency>
+		<currency>EUR</currency>
+		<currency>GBP</currency>
+		<currency>HKD</currency>
+		<currency>HUF</currency>
+		<currency>INR</currency>
+		<currency>JPY</currency>
+		<currency>MXN</currency>
+		<currency>MYR</currency>
+		<currency>NOK</currency>
+		<currency>NZD</currency>
+		<currency>PHP</currency>
+		<currency>RUB</currency>
+		<currency>SEK</currency>
+		<currency>SGD</currency>
+		<currency>THB</currency>
+		<currency>TRY</currency>
+		<currency>USD</currency>
+		<currency>ZAR</currency>
+	</currencies>
+	
 </configuration>
