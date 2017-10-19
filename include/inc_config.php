@@ -1,13 +1,20 @@
 <?php
 
-$configuration = simplexml_load_file("configuration.xml");
+//$configuration = simplexml_load_file("configuration.xml");
+$configuration = new DOMDocument();
+$configuration->load("configuration.xml");
 
-define("BASE_CURRENCY", $configuration->base);
+define("BASE_CURRENCY", $configuration->getElementsByTagName("base")->item(0)->nodeValue);
 
-define("CURRENCIES_FILE", $configuration->data->currencies);
-define("CURRENCIES_SOURCE", $configuration->sources->currencies);
+define("CURRENCIES_FILE", $configuration->getElementsByTagName("currencies_data")->item(0)->nodeValue);
+define("CURRENCIES_SOURCE", $configuration->getElementsByTagName("currencies_source")->item(0)->nodeValue);
 
-define("RATES_FILE", $configuration->data->rates);
-define("RATES_SOURCE", $configuration->sources->rates);
+define("RATES_FILE", $configuration->getElementsByTagName("rates_data")->item(0)->nodeValue);
+define("RATES_SOURCE", $configuration->getElementsByTagName("rates_source")->item(0)->nodeValue);
 
-define("CURRENCIES", explode(", ", $configuration->currencies));
+
+$defaultCurrencies = array();
+foreach($configuration->getElementsByTagName("currency") AS $currency) {
+	$defaultCurrencies[] = $currency->textContent;
+}
+define("DEFAULT_CURRENCIES", join(",",$defaultCurrencies));
