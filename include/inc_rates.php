@@ -65,24 +65,20 @@ class rates {
 			}
 		}
 		
-		//Piece together the XML file to be saved with all currencies
-		$xml =
-		"<?xml version='1.0' encoding='UTF-8'?>".
-		"<currencies>";
-			foreach($currencies AS $currency) {
-				$xml .=
-				"<currency>".
-					"<code>{$currency['code']}</code>".
-					"<name>{$currency['curr']}</name>".
-					//Locaitons need joining, since stored as an array
-					"<location>".join(", ", $currency['loc'])."</location>".
-				"</currency>";
-			}
-			$xml .=
-		"</currencies>";
-			
+		//Piece together the new XML document with all currencies
+		$xml = new DOMDocument();
+		$root = $xml->createElement("currencies");
+		$xml->appendChild($root);
+		foreach($currencies AS $currency) {
+			$item = $xml->createElement("currency");
+			$root->appendChild($item);
+			$item->appendChild($xml->createElement("code", $currency['code']));
+			$item->appendChild($xml->createElement("name", $currency['curr']));
+			$item->appendChild($xml->createElement("location", join(", ", $currency['loc'])));
+		}
+		
 		//Write the XML out to a file
-		file_put_contents(CURRENCIES_FILE, $xml);
+		$xml->save(CURRENCIES_FILE);
 	}
 	
 	/**
@@ -121,20 +117,30 @@ class rates {
 		//This is opting to use system time, rather than the respone timestamp to avoid
 		//any confusion of timezones.
 		$timestamp = new DateTime();
-		$xml =
-		"<?xml version='1.0' encoding='UTF-8'?>".
-		"<rates>";
-			foreach($rates->getElementsByTagName("rate") AS $rate) {
-				//Pick out the name and rate from the response
-				$code = substr($rate->getElementsByTagName("Name")->item(0)->nodeValue, -3);
-				$value = $rate->getElementsByTagName("Rate")->item(0)->nodeValue;
-				$xml .= "<rate code='{$code}' value='{$value}' ts='{$timestamp->format("U")}'/>";
-			}
-			$xml .=
-		"</rates>";
+		
+		//Piece together the new XML document with all given rates
+		$xml = new DOMDocument();
+		$root = $xml->createElement("rates");
+		$xml->appendChild($root);
+		foreach($rates->getElementsByTagName("rate") AS $rate) {
+			$item = $xml->createElement("rate");
+			$root->appendChild($item);
+			
+			$codeAttribute = $xml->createAttribute("code");
+			$codeAttribute->value = substr($rate->getElementsByTagName("Name")->item(0)->nodeValue, -3);
+			$item->appendChild($codeAttribute);
+			
+			$valueAttribute = $xml->createAttribute("value");
+			$valueAttribute->value = $rate->getElementsByTagName("Rate")->item(0)->nodeValue;
+			$item->appendChild($valueAttribute);
+			
+			$timeAttribute = $xml->createAttribute("timestamp");
+			$timeAttribute->value = $timestamp->format("U");
+			$item->appendChild($timeAttribute);
+		}
 			
 		//Write the XML out to a file
-		file_put_contents(RATES_FILE, $xml);
+		$xml->save(RATES_FILE);
 	}
 	
 	/**
@@ -183,6 +189,30 @@ class rates {
 		return $result;
 	}
 	
+	private function error_message() {
+		switch($this->error) {
+			//Error messages for GET
+			case 1000 : $msg = "Required parameter is missing"; break;
+			case 1100 : $msg = "Parameter not recognized"; break;
+			case 1200 : $msg = "Currency type not recognized"; break;
+			case 1300 : $msg = "Currency amount must be a decimal number"; break;
+			case 1400 : $msg = "Format must be xml or json"; break;
+			case 1500 : $msg = "Error in service"; break;
+			
+			//Error messages for POST, PUT and DELETE
+			case 2000 : $msg = "Method not recognized or is missing"; break;
+			case 2100 : $msg = "Rate in wrong format or is missing"; break;
+			case 2200 : $msg = "Currency code in wrong format or is missing"; break;
+			case 2300 : $msg = "Country name in wrong format or is missing"; break;
+			case 2400 : $msg = "Currency code not found for update"; break;
+			case 2500 : $msg = "Error in service"; break;
+			
+			default : $msg = "An unknown error has occurred"; break;	
+		}
+		
+		return $msg;
+	}
+	
 	/**
 	 * This function converts a specified amount between two ISO currencies.
 	 * @param string $from The three letter ISO currency code to convert from.
@@ -209,5 +239,20 @@ class rates {
 		}
 		
 		return $result;
+	}
+	
+	public function response() {
+		$xml = new DOMDocument();
+		$root = $xml->createElement("conv");
+		$xml->appendChild($root);
+		if(isset($this->error)) {
+			$error = $xml->createElement("error");
+			$root->appendChild($error);
+		}
+		else {
+			
+		}
+		
+		return $xml->saveXML();
 	}
 }
