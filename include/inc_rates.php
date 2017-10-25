@@ -28,9 +28,11 @@ class currencyapi {
 	function __construct() {
 		$this->currencies = new DOMDocument();
 		$this->rates = new DOMDocument();
-		$this->response = new DOMDocument();
+		$this->response = new DOMDocument('1.0', 'UTF-8');
+		$this->response->preserveWhiteSpace = false;
+		$this->response->formatOutput = true;
 		//Set the error to false, any number assigned will pass as true
-		$this->error = false;
+		$this->set_error(false);
 		
 		//Temporary success body made here, need to format successful response
 		$this->body = $this->response->createElement("successful");
@@ -200,7 +202,7 @@ class currencyapi {
 		
 		//If no valid result is found, set an error
 		if(is_nan($result)) {
-			$this->error = 1200;
+			$this->set_error(1200);
 			$result = false;
 		}
 		
@@ -218,7 +220,7 @@ class currencyapi {
 		
 		//If no valid result is found, set an error
 		if(!is_string($result)) {
-			$this->error = 1200;
+			$this->set_error(1200);
 			$result = false;
 		}
 		
@@ -236,7 +238,7 @@ class currencyapi {
 		
 		//If no valid result is found, set an error
 		if(!is_string($result)) {
-			$this->error = 1200;
+			$this->set_error(1200);
 			$result = false;
 		}
 		
@@ -287,14 +289,14 @@ class currencyapi {
 	 * @return float The amount resulting from the conversion, or false if an
 	 * error was encountered.
 	 */
-	private function convert($from, $to, $amount = 1) {
-		//Check that a valid amount is being converted
-		if(!is_numeric($amount)) {
-			$this->error = 1300;
-		}
-		
+	private function convert($from, $to, $amount) {
 		$fromRate = $this->check_rate($from);
 		$toRate = $this->check_rate($to);
+		
+		//Check that a valid amount is being converted
+		if(!preg_match('/^[0-9]+\.[0-9]+$/', (string)$amount)) {
+			$this->set_error(1300);
+		}
 		
 		//Check no error has been encountered
 		if(!isset($this->error)) {
@@ -306,46 +308,6 @@ class currencyapi {
 		
 		return $result;
 	}
-	
-//	public function check_parameters($requiredParameters, $givenParameters) {
-//		$valid = true;
-//		foreach($requiredParameters AS $required) {
-//			if(!isset($givenParameters[strtolower($required)])) {
-//				switch(strtolower($required)) {
-//					case "method" : $this->error = 2000; break;
-//					default : $this->error = 1000; break;
-//				}
-//				$valid = false;
-//				break;
-//			}
-//			else {
-//				unset($givenParameters[strtolower($required)]);
-//			}
-//		}
-//		
-//		//If any parameters remain, they are unrecognized
-//		if(count($givenParameters)) {
-//			$this->error = 1100;
-//		}
-//		return $valid;
-//		
-//		return true;
-//	}
-	
-//	public function response() {
-//		$xml = new DOMDocument();
-//		$root = $xml->createElement("conv");
-//		$xml->appendChild($root);
-//		if($this->error) {
-//			$error = $xml->createElement("error");
-//			$root->appendChild($error);
-//		}
-//		else {
-//			
-//		}
-//		
-//		return $xml->saveXML();
-//	}
 	
 	/**
 	 * This function checks whether all required parameters are present, and
@@ -364,14 +326,14 @@ class currencyapi {
 			}
 			//If a required parameter is not found set an error
 			else {
-				$this->error = 1000;
+				$this->set_error(1000);
 				$valid = false;
 			}
 		}
 		
 		//If there are any additional parameters given (unrecognized) set an error
 		if(count($givenParameters)) {
-			$this->error = 1100;
+			$this->set_error(1100);
 			$valid = false;
 		}
 		
@@ -402,18 +364,24 @@ class currencyapi {
 			header("Content-type: application/json");
 			
 			//TODO format as JSON instead of XML, json_encode not sufficient
-			echo $this->response();
+			echo json_encode(simplexml_load_string($this->response()), JSON_PRETTY_PRINT);
 		}
 		//Otherwise default to XML headers
 		else {
 			header("Content-type: text/xml");
 			//If XML was defaulted to, not specified, set an error
 			if(strtolower($format) !== "xml") {
-				$this->error = 1400;
+				$this->set_error(1400);
 			}
 			
 			//Send the response as XML
 			echo $this->response();
+		}
+	}
+	
+	private function set_error($error) {
+		if(!$this->error) {
+			$this->error = $error;
 		}
 	}
 	
@@ -431,7 +399,7 @@ class currencyapi {
 		
 		$this->root = $this->response->createElement("conv");
 		$this->response->appendChild($this->root);
-		$this->send_response($parameters['format']);
+		$this->send_response(isset($parameters['format']) ? $parameters['format'] : null);
 	}
 	
 	public function post($parameters) {
