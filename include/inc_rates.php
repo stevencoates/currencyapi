@@ -4,10 +4,21 @@
  * This class is put together to contain all valid currencies stored by the
  * system, as well as the most up to date exchange rates.
  */
-class rates {
+class currencyapi {
+	//An XML object containing names, codes and locations for all valid currencies
 	private $currencies;
+	//An XML object containing codes and exchange rates for all selected currencies
 	private $rates;
+
+	//Any error code that has been set, defaults to false on construction
 	private $error;
+	
+	//The XML object to send as a response
+	private $response;
+	//The root node of the response object
+	private $root;
+	//The main body to be added to the response
+	private $body;
 	
 	/**
 	 * This function initiates the rates object, either retrieving information
@@ -17,6 +28,12 @@ class rates {
 	function __construct() {
 		$this->currencies = new DOMDocument();
 		$this->rates = new DOMDocument();
+		$this->response = new DOMDocument();
+		//Set the error to false, any number assigned will pass as true
+		$this->error = false;
+		
+		//Temporary success body made here, need to format successful response
+		$this->body = $this->response->createElement("successful");
 		
 		//If the currencies file does not exist, populate it before loading
 		if(!file_exists(CURRENCIES_FILE)) {
@@ -175,42 +192,91 @@ class rates {
 	/**
 	 * This function checks the most recent exchange rate for a single currency.
 	 * @param string $currency The three letter ISO currency code to be checked.
-	 * @return float The exchange rate currently stored.
+	 * @return float The exchange rate currently stored, false if no valid result.
 	 */
 	private function check_rate($currency) {
 		$query = new DOMXpath($this->rates);
 		$result = $query->evaluate("number(//rate[@code='{$currency}']/@value)");
 		
 		//If no valid result is found, set an error
-		if(!$result) {
+		if(is_nan($result)) {
 			$this->error = 1200;
+			$result = false;
 		}
 		
 		return $result;
 	}
 	
-	private function error_message() {
-		switch($this->error) {
-			//Error messages for GET
-			case 1000 : $msg = "Required parameter is missing"; break;
-			case 1100 : $msg = "Parameter not recognized"; break;
-			case 1200 : $msg = "Currency type not recognized"; break;
-			case 1300 : $msg = "Currency amount must be a decimal number"; break;
-			case 1400 : $msg = "Format must be xml or json"; break;
-			case 1500 : $msg = "Error in service"; break;
-			
-			//Error messages for POST, PUT and DELETE
-			case 2000 : $msg = "Method not recognized or is missing"; break;
-			case 2100 : $msg = "Rate in wrong format or is missing"; break;
-			case 2200 : $msg = "Currency code in wrong format or is missing"; break;
-			case 2300 : $msg = "Country name in wrong format or is missing"; break;
-			case 2400 : $msg = "Currency code not found for update"; break;
-			case 2500 : $msg = "Error in service"; break;
-			
-			default : $msg = "An unknown error has occurred"; break;	
+	/**
+	 * This function checks the name associated with a single currency.
+	 * @param string $currency The three letter ISO currency code to be checked.
+	 * @return string The name of the given currency, false if no valid result.
+	 */
+	private function check_name($currency) {
+		$query = new DOMXpath($this->currencies);
+		$result = $query->evaluate("string(//currency[code='{$currency}']/name");
+		
+		//If no valid result is found, set an error
+		if(!is_string($result)) {
+			$this->error = 1200;
+			$result = false;
 		}
 		
-		return $msg;
+		return $result;
+	}
+	
+	/**
+	 * This function checks the locations associated with a single currency.
+	 * @param string $currency The three letter ISO currency code to be checked.
+	 * @return string The locations of the given currency, false if no valid result.
+	 */
+	private function check_location($currency) {
+		$query = new DOMXpath($this->currencies);
+		$result = $query->evaluate("string(//currency[code='{$currency}']/location)");
+		
+		//If no valid result is found, set an error
+		if(!is_string($result)) {
+			$this->error = 1200;
+			$result = false;
+		}
+		
+		return $result;
+	}
+	
+	/**
+	 * This function returns any given error code in the API's runtime
+	 */
+	public function error() {
+		return $this->error;
+	}
+	
+	/**
+	 * This function looks up the relevant error message for the most recent error
+	 * encountered in the API.
+	 * @return string The error message encountered, or false if no error occurred
+	 */
+	public function error_message() {
+		switch($this->error) {
+			//Error messages for GET requests
+			case 1000 : $error = "Required parameter is missing"; break;
+			case 1100 : $error = "Parameter not recognized"; break;
+			case 1200 : $error = "Currency type not recognized"; break;
+			case 1300 : $error = "Currency amount must be a decimal number"; break;
+			case 1400 : $error = "Format must be xml or json"; break;
+			case 1500 : $error = "Error in service"; break;
+			
+			//Error messages for POST, PUT and DELETE requests
+			case 2000 : $error = "Method not recognized or is missing"; break;
+			case 2100 : $error = "Rate in wrong format or is missing"; break;
+			case 2200 : $error = "Currency code in wrong format or is missing"; break;
+			case 2300 : $error = "Country name in wrong format or is missing"; break;
+			case 2400 : $error = "Currency code not found for update"; break;
+			case 2500 : $error = "Error in service"; break;
+			
+			default : $error = false; break;	
+		}
+		
+		return $error;
 	}
 	
 	/**
@@ -221,7 +287,7 @@ class rates {
 	 * @return float The amount resulting from the conversion, or false if an
 	 * error was encountered.
 	 */
-	public function convert($from, $to, $amount = 1) {
+	private function convert($from, $to, $amount = 1) {
 		//Check that a valid amount is being converted
 		if(!is_numeric($amount)) {
 			$this->error = 1300;
@@ -241,18 +307,158 @@ class rates {
 		return $result;
 	}
 	
-	public function response() {
-		$xml = new DOMDocument();
-		$root = $xml->createElement("conv");
-		$xml->appendChild($root);
-		if(isset($this->error)) {
-			$error = $xml->createElement("error");
-			$root->appendChild($error);
-		}
-		else {
-			
+//	public function check_parameters($requiredParameters, $givenParameters) {
+//		$valid = true;
+//		foreach($requiredParameters AS $required) {
+//			if(!isset($givenParameters[strtolower($required)])) {
+//				switch(strtolower($required)) {
+//					case "method" : $this->error = 2000; break;
+//					default : $this->error = 1000; break;
+//				}
+//				$valid = false;
+//				break;
+//			}
+//			else {
+//				unset($givenParameters[strtolower($required)]);
+//			}
+//		}
+//		
+//		//If any parameters remain, they are unrecognized
+//		if(count($givenParameters)) {
+//			$this->error = 1100;
+//		}
+//		return $valid;
+//		
+//		return true;
+//	}
+	
+//	public function response() {
+//		$xml = new DOMDocument();
+//		$root = $xml->createElement("conv");
+//		$xml->appendChild($root);
+//		if($this->error) {
+//			$error = $xml->createElement("error");
+//			$root->appendChild($error);
+//		}
+//		else {
+//			
+//		}
+//		
+//		return $xml->saveXML();
+//	}
+	
+	/**
+	 * This function checks whether all required parameters are present, and
+	 * that no unrecognized parameters are.
+	 * @param array $requiredParameters An array of required parameter names.
+	 * @param array $givenParameters An array of parameters, indexed by name.
+	 * @return boolean Whether or not all (and only) required parameters are set.
+	 */
+	private function check_parameters($requiredParameters, $givenParameters) {
+		$valid = true;
+		//Loop through each required parameter to compare
+		foreach($requiredParameters AS $required) {
+			//Unset the proper parameters, so we can check for any unrecognized
+			if(isset($givenParameters[$required])) {
+				unset($givenParameters[$required]);
+			}
+			//If a required parameter is not found set an error
+			else {
+				$this->error = 1000;
+				$valid = false;
+			}
 		}
 		
-		return $xml->saveXML();
+		//If there are any additional parameters given (unrecognized) set an error
+		if(count($givenParameters)) {
+			$this->error = 1100;
+			$valid = false;
+		}
+		
+		return $valid;
+	}
+	
+	private function response() {
+		if($this->error) {
+			$error = $this->response->createElement("error");
+			$this->root->appendChild($error);
+
+			$code = $this->response->createElement("code", $this->error);
+			$error->appendChild($code);
+
+			$message = $this->response->createElement("msg", $this->error_message());
+			$error->appendChild($message);
+		}
+		else {
+			$this->root->appendChild($this->body);
+		}
+		
+		return $this->response->saveXML();
+	}
+	
+	private function send_response($format = "xml") {
+		//Set JSON headers if specified
+		if(strtolower($format) === "json") {
+			header("Content-type: application/json");
+			
+			//TODO format as JSON instead of XML, json_encode not sufficient
+			echo $this->response();
+		}
+		//Otherwise default to XML headers
+		else {
+			header("Content-type: text/xml");
+			//If XML was defaulted to, not specified, set an error
+			if(strtolower($format) !== "xml") {
+				$this->error = 1400;
+			}
+			
+			//Send the response as XML
+			echo $this->response();
+		}
+	}
+	
+	public function get($parameters) {
+		$requiredParameters = array(
+			'from',
+			'to',
+			'amnt',
+			'format'
+		);
+		//Check that all parameters given are correct
+		if($this->check_parameters($requiredParameters, $parameters)) {
+			$this->convert($parameters['from'], $parameters['to'], $parameters['amnt']);
+		}
+		
+		$this->root = $this->response->createElement("conv");
+		$this->response->appendChild($this->root);
+		$this->send_response($parameters['format']);
+	}
+	
+	public function post($parameters) {
+		$requiredParameters = array(
+			'method',
+			'code',
+			'rate'
+		);
+		$this->check_parameters($requiredParameters, $parameters);
+		
+	}
+	
+	public function put($parameters) {
+		$requiredParameters = array(
+			'method',
+			'code'
+		);
+		$this->check_parameters($requiredParameters, $parameters);
+		
+	}
+	
+	public function delete($parameters) {
+		$requiredParameters = array(
+			'method',
+			'code'
+		);
+		$this->check_parameters($requiredParameters, $parameters);
+		
 	}
 }
