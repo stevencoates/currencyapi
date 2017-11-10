@@ -31,7 +31,7 @@ class currencyapi {
 		$this->response = new DOMDocument('1.0', 'UTF-8');
 		$this->response->preserveWhiteSpace = false;
 		$this->response->formatOutput = true;
-		//Set the error to false, any number assigned will pass as true
+		//Set the error to false, any number later assigned will pass as true
 		$this->set_error(false);
 		
 		//Temporary success body made here, need to format successful response
@@ -144,7 +144,12 @@ class currencyapi {
 		foreach($rates->getElementsByTagName("rate") AS $rate) {
 			$item = $xml->createElement("rate");
 			$root->appendChild($item);
+			//Edit the timestamp to match the relevant response from Yahoo
+			$timestamp->modify($rate->getElementsByTagName("Date")->item(0)->nodeValue);
+			$timestamp->modify($rate->getElementsByTagName("Time")->item(0)->nodeValue);
 			
+			
+			//Write all of the data in to an XML node
 			$codeAttribute = $xml->createAttribute("code");
 			$codeAttribute->value = substr($rate->getElementsByTagName("Name")->item(0)->nodeValue, -3);
 			$item->appendChild($codeAttribute);
@@ -275,7 +280,7 @@ class currencyapi {
 			case 2400 : $error = "Currency code not found for update"; break;
 			case 2500 : $error = "Error in service"; break;
 			
-			default : $error = false; break;	
+			default : $error = false; break;
 		}
 		
 		return $error;
@@ -290,8 +295,7 @@ class currencyapi {
 	 * error was encountered.
 	 */
 	private function convert($from, $to, $amount) {
-		$fromRate = $this->check_rate($from);
-		$toRate = $this->check_rate($to);
+		$rate = $this->conversion_rate($from, $to);
 		
 		//Check that a valid amount is being converted
 		if(!preg_match('/^[0-9]+\.[0-9]+$/', (string)$amount)) {
@@ -299,14 +303,27 @@ class currencyapi {
 		}
 		
 		//Check no error has been encountered
-		if(!isset($this->error)) {
-			$result = ($amount * $toRate)/$fromRate;
+		if(!$this->error) {
+			$result = $rate * $amount;
 		}
 		else {
 			$result = false;
 		}
 		
 		return $result;
+	}
+	
+	/**
+	 * This function checks the rate of conversion between two ISO currencies.
+	 * @param string $from The three letter ISO currency code to convert from.
+	 * @param string $to The three letter ISO currency code to convert to.
+	 * @return float The resulting conversion rate between the two currencies.
+	 */
+	private function conversion_rate($from, $to) {
+		$fromRate = $this->check_rate($from);
+		$toRate = $this->check_rate($to);
+		
+		return $toRate / $fromRate;
 	}
 	
 	/**
@@ -351,14 +368,11 @@ class currencyapi {
 			$message = $this->response->createElement("msg", $this->error_message());
 			$error->appendChild($message);
 		}
-		else {
-			$this->root->appendChild($this->body);
-		}
-		
+
 		return $this->response->saveXML();
 	}
 	
-	private function send_response($format = "xml") {
+	private function send_response($format = DEFAULT_FORMAT) {
 		//Set JSON headers if specified
 		if(strtolower($format) === "json") {
 			header("Content-type: application/json");
@@ -399,9 +413,10 @@ class currencyapi {
 		
 		$this->root = $this->response->createElement("conv");
 		$this->response->appendChild($this->root);
+		
 		$this->send_response(isset($parameters['format']) ? $parameters['format'] : null);
 	}
-	
+
 	public function post($parameters) {
 		$requiredParameters = array(
 			'method',
@@ -411,16 +426,16 @@ class currencyapi {
 		$this->check_parameters($requiredParameters, $parameters);
 		
 	}
-	
+
 	public function put($parameters) {
 		$requiredParameters = array(
 			'method',
 			'code'
 		);
 		$this->check_parameters($requiredParameters, $parameters);
-		
+
 	}
-	
+
 	public function delete($parameters) {
 		$requiredParameters = array(
 			'method',
@@ -430,3 +445,6 @@ class currencyapi {
 		
 	}
 }
+	
+//11h 44m at 9:14
+	

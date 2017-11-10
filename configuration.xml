@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 	<base>GBP</base>
+	<default_format>xml</default_format>
 	<rates_data>rates.xml</rates_data>
 	<currencies_data>currencies.xml</currencies_data>
 	<rates_source>https://query.yahooapis.com/v1/public/yql?format=xml&amp;env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys&amp;q=</rates_source>
