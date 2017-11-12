@@ -13,6 +13,7 @@ define("CURRENCIES_SOURCE", $configuration->getElementsByTagName("currencies_sou
 
 define("RATES_FILE", $configuration->getElementsByTagName("rates_data")->item(0)->nodeValue);
 define("RATES_SOURCE", $configuration->getElementsByTagName("rates_source")->item(0)->nodeValue);
+define("RATES_KEY", $configuration->getElementsByTagName("rates_key")->item(0)->nodeValue);
 
 
 $defaultCurrencies = array();

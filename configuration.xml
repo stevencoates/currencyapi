@@ -4,7 +4,8 @@
 	<default_format>xml</default_format>
 	<rates_data>rates.xml</rates_data>
 	<currencies_data>currencies.xml</currencies_data>
-	<rates_source>https://query.yahooapis.com/v1/public/yql?format=xml&amp;env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys&amp;q=</rates_source>
+	<rates_source>https://openexchangerates.org/api/latest.json?app_id=</rates_source>
+	<rates_key>OMMITTED</rates_key>
 	<currencies_source>https://www.currency-iso.org/dam/downloads/lists/list_one.xml</currencies_source>
 	<default_currencies>
 		<currency>CAD</currency>

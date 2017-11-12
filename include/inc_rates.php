@@ -37,17 +37,21 @@ class currencyapi {
 		//Temporary success body made here, need to format successful response
 		$this->body = $this->response->createElement("successful");
 		
-		//If the currencies file does not exist, populate it before loading
+		//If the currencies file does not exist populate it, otherwise load it
 		if(!file_exists(CURRENCIES_FILE)) {
 			$this->initialise_currencies();
 		}
-		$this->currencies->load(CURRENCIES_FILE);
+		else {
+			$this->currencies->load(CURRENCIES_FILE);
+		}
 		
-		//If the rates file does not exist, populate it befor eloading
+		//If the rates file does not exist populate it, otherwise load it
 		if(!file_exists(RATES_FILE)) {
 			$this->initialise_rates();
 		}
-		$this->rates->load(RATES_FILE);
+		else {
+			$this->rates->load(RATES_FILE);
+		}
 		
 		//TODO check through all rates here and then update if needed
 		if(false) {
@@ -84,20 +88,19 @@ class currencyapi {
 			}
 		}
 		
-		//Piece together the new XML document with all currencies
-		$xml = new DOMDocument();
-		$root = $xml->createElement("currencies");
-		$xml->appendChild($root);
+		//Piece together the new XML document with all 
+		$root = $this->currencies->createElement("currencies");
+		$this->currencies->appendChild($root);
 		foreach($currencies AS $currency) {
-			$item = $xml->createElement("currency");
+			$item = $this->currencies->createElement("currency");
 			$root->appendChild($item);
-			$item->appendChild($xml->createElement("code", $currency['code']));
-			$item->appendChild($xml->createElement("name", $currency['curr']));
-			$item->appendChild($xml->createElement("location", join(", ", $currency['loc'])));
+			$item->appendChild($this->currencies->createElement("code", $currency['code']));
+			$item->appendChild($this->currencies->createElement("name", $currency['curr']));
+			$item->appendChild($this->currencies->createElement("location", join(", ", $currency['loc'])));
 		}
 		
 		//Write the XML out to a file
-		$xml->save(CURRENCIES_FILE);
+		$this->currencies->save(CURRENCIES_FILE);
 	}
 	
 	/**
@@ -105,16 +108,16 @@ class currencyapi {
 	 * configuration and stores them in an XML file.
 	 */
 	private function initialise_rates() {		
-		$rates = $this->fetch_rates(explode(",", DEFAULT_CURRENCIES));
-		$this->write_rates($rates);
+		$this->fetch_rates(explode(",", DEFAULT_CURRENCIES));
 	}
 	
 	/**
 	 * This function retrieves all currencies currently in our exchange rates
 	 * XML file, and updates their exchange rates to the most recent values to
 	 * be stored in the file.
+	 * @param string $additional An additional three letter ISO code to be added.
 	 */
-	private function update_rates() {
+	private function update_rates($additional = null) {
 		$query = new DOMXpath($this->rates);
 		
 		$currencies = array();
@@ -123,77 +126,58 @@ class currencyapi {
 			$currencies[] = $code->nodeValue;
 		}
 		
-		$rates = $this->fetch_rates($codes);
-		$this->write_rates($rates);
-	}
-	
-	/**
-	 * This function writes a set of exchange rates to an XML file.
-	 * @param DOMNodeList $rates The set of exchange rates to be stored.
-	 */
-	private function write_rates($rates) {
-		//Set a timestamp for the time we're updating the rates
-		//This is opting to use system time, rather than the respone timestamp to avoid
-		//any confusion of timezones.
-		$timestamp = new DateTime();
-		
-		//Piece together the new XML document with all given rates
-		$xml = new DOMDocument();
-		$root = $xml->createElement("rates");
-		$xml->appendChild($root);
-		foreach($rates->getElementsByTagName("rate") AS $rate) {
-			$item = $xml->createElement("rate");
-			$root->appendChild($item);
-			//Edit the timestamp to match the relevant response from Yahoo
-			$timestamp->modify($rate->getElementsByTagName("Date")->item(0)->nodeValue);
-			$timestamp->modify($rate->getElementsByTagName("Time")->item(0)->nodeValue);
-			
-			
-			//Write all of the data in to an XML node
-			$codeAttribute = $xml->createAttribute("code");
-			$codeAttribute->value = substr($rate->getElementsByTagName("Name")->item(0)->nodeValue, -3);
-			$item->appendChild($codeAttribute);
-			
-			$valueAttribute = $xml->createAttribute("value");
-			$valueAttribute->value = $rate->getElementsByTagName("Rate")->item(0)->nodeValue;
-			$item->appendChild($valueAttribute);
-			
-			$timeAttribute = $xml->createAttribute("timestamp");
-			$timeAttribute->value = $timestamp->format("U");
-			$item->appendChild($timeAttribute);
+		//If an additional currency is provided, and is not already used, add it
+		if(isset($additional) && !in_array(strtoupper($additional), $currencies)) {
+			$currencies[] = strtoupper($additional);
 		}
-			
-		//Write the XML out to a file
-		$xml->save(RATES_FILE);
+		
+		//Set up rates as a clear DOMDocument, to avoid duplication
+		$this->rates = new DOMDocument();
+		$this->fetch_rates($currencies);
 	}
 	
 	/**
 	 * This function fetches the most recent exchange rates for a set of
-	 * currencies provided.
-	 * @param array $currencies The exchange rates to be retrieved.
-	 * @return DOMDocument An XML document containing the rates retrieved.
+	 * currencies provided, and writes them out to our XML file.
+	 * @param array $currencies An array containing three letter ISO currencies.
 	 */
 	private function fetch_rates($currencies) {
-		$pairs = array();
-		//Pair each of the currencies with the base currency
+		$data = file_get_contents(RATES_SOURCE.RATES_KEY);
+		$rates = json_decode($data, true);
+
+		//Initialize (or re-initialize to be clear) the DOMDocument
+		$this->rates = new DOMDocument();
+		
+		$root = $this->rates->createElement("rates");
+		$this->rates->appendChild($root);
+		//Loop through each of the desired currencies
 		foreach($currencies AS $currency) {
-			//Write the pair of currencies in quotes for our query
-			$pairs[] = "'".BASE_CURRENCY.$currency."'";
+			//Ensure that the rate exists in data
+			if(isset($rates['rates'][$currency])) {
+				$element = $this->rates->createElement("rate");
+				$root->appendChild($element);
+
+				//Write all of the data in as attributes
+				$codeAttribute = $this->rates->createAttribute("code");
+				$codeAttribute->value = $currency;
+				$element->appendChild($codeAttribute);
+
+				$valueAttribute = $this->rates->createAttribute("value");
+				$valueAttribute->value = $rates['rates'][$currency];
+				$element->appendChild($valueAttribute);
+
+				$timeAttribute = $this->rates->createAttribute("timestamp");
+				$timeAttribute->value = $rates['timestamp'];
+				$element->appendChild($timeAttribute);
+			}
+			//Otherwise set an error for the current request
+			else {
+				$this->set_error(1200);
+			}
 		}
-		
-		//Parse the query so that we can fetch it
-		$query = urlencode("select * from yahoo.finance.xchange where pair in ".
-							"(".join(",", $pairs).")");
-		
-		$rates = new DOMDocument();
-		try {
-			$rates->load(RATES_SOURCE.$query);
-		}
-		catch(Exception $e) {
-			echo "error";
-		}
-		
-		return $rates;
+
+		//Save the XML regardless of an error encountered, removing any invalid currencies
+		$this->rates->save(RATES_FILE);
 	}
 	
 	/**
@@ -214,12 +198,23 @@ class currencyapi {
 		return $result;
 	}
 	
+	private function validate_currency($currency) {
+		$query = new DOMXpath($this->currencies);
+		$result = $query->evaluate("//currency[code='{$currency}']");
+		
+		if(!$result) {
+			$this->set_error(2200);
+		}
+		
+		return (bool)$result;
+	}
+	
 	/**
 	 * This function checks the name associated with a single currency.
 	 * @param string $currency The three letter ISO currency code to be checked.
 	 * @return string The name of the given currency, false if no valid result.
 	 */
-	private function check_name($currency) {
+	private function currency_name($currency) {
 		$query = new DOMXpath($this->currencies);
 		$result = $query->evaluate("string(//currency[code='{$currency}']/name");
 		
@@ -237,7 +232,7 @@ class currencyapi {
 	 * @param string $currency The three letter ISO currency code to be checked.
 	 * @return string The locations of the given currency, false if no valid result.
 	 */
-	private function check_location($currency) {
+	private function currency_location($currency) {
 		$query = new DOMXpath($this->currencies);
 		$result = $query->evaluate("string(//currency[code='{$currency}']/location)");
 		
@@ -298,7 +293,7 @@ class currencyapi {
 		$rate = $this->conversion_rate($from, $to);
 		
 		//Check that a valid amount is being converted
-		if(!preg_match('/^[0-9]+\.[0-9]+$/', (string)$amount)) {
+		if(!preg_match('/^\d+\.\d+$/', (string)$amount)) {
 			$this->set_error(1300);
 		}
 		
@@ -324,6 +319,61 @@ class currencyapi {
 		$toRate = $this->check_rate($to);
 		
 		return $toRate / $fromRate;
+	}
+	
+	private function insert_rate($currency) {
+		if($this->validate_currency($currency)) {
+			//Update the rates with the new currency added in
+			$this->update_rates($currency);
+			
+			$result = true;
+		}
+		else {
+			$result = false;
+		}
+		
+		return $result;
+	}
+	
+	private function remove_rate($currency) {
+		$query = new DOMXpath($this->rates);
+		$rates = $query->query("//rate[@code='{$currency}']");
+
+		//Loop through to remove all instances in case of duplication
+		foreach($rates AS $rate) {
+			$rate->parentNode->removeChild($rate);
+		}
+		
+		//Write over the file with the rate removed
+		$this->rates->save(RATES_FILE);
+	}
+	
+	private function edit_rate($currency, $value) {
+		//Check that a valid rate is being given
+		if(!preg_match('/^\d+\.\d+$/', (string)$value)) {
+			$this->set_error(2100);
+		}
+		
+		if(!$this->error) {
+			$query = new DOMXpath($this->rates);
+			$rates = $query->query("//rate[@code='{$currency}']");
+
+			//Loop through to edit all instances in case of duplication
+			foreach($rates AS $rate) {
+				$rate->setAttribute("value", $value);
+				$rate->setAttribute("timestamp", time());
+			}
+
+			//Write over the file with the rate removed
+			$this->rates->save(RATES_FILE);
+			
+			$result = true;
+		}
+		else {
+			$result = false;
+		}
+		
+		return $result;
 	}
 	
 	/**
@@ -419,32 +469,48 @@ class currencyapi {
 
 	public function post($parameters) {
 		$requiredParameters = array(
-			'method',
+//			'method',
 			'code',
 			'rate'
 		);
-		$this->check_parameters($requiredParameters, $parameters);
+		if($this->check_parameters($requiredParameters, $parameters)) {
+			$this->edit_rate($parameters['code'], $parameters['rate']);
+		}
 		
+		$this->root = $this->response->createElement("conv");
+		$this->response->appendChild($this->root);
+		
+		$this->send_response();
 	}
 
 	public function put($parameters) {
 		$requiredParameters = array(
-			'method',
+//			'method',
 			'code'
 		);
-		$this->check_parameters($requiredParameters, $parameters);
+		if($this->check_parameters($requiredParameters, $parameters)) {
+			$this->insert_rate($parameters['code']);
+		}
 
+		$this->root = $this->response->createElement("conv");
+		$this->response->appendChild($this->root);
+		
+		$this->send_response();
 	}
 
 	public function delete($parameters) {
 		$requiredParameters = array(
-			'method',
+//			'method',
 			'code'
 		);
-		$this->check_parameters($requiredParameters, $parameters);
+		if($this->check_parameters($requiredParameters, $parameters)) {
+			$this->remove_rate($parameters['code']);
+		}
+
+		$this->root = $this->response->createElement("conv");
+		$this->response->appendChild($this->root);
 		
+		$this->send_response();		
 	}
 }
-	
-//11h 44m at 9:14
 	
