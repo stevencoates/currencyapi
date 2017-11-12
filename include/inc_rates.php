@@ -388,7 +388,7 @@ class currencyapi {
 		//Loop through each required parameter to compare
 		foreach($requiredParameters AS $required) {
 			//Unset the proper parameters, so we can check for any unrecognized
-			if(isset($givenParameters[$required])) {
+			if(isset($givenParameters[$required]) && $givenParameters[$required] != "") {
 				unset($givenParameters[$required]);
 			}
 			//If a required parameter is not found set an error

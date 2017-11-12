@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Currency Conversion API</title>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link rel="stylesheet" href="css/style.css"/>
+		<script src="js/jquery-3.2.1.min.js"></script>
+		<script type="text/javascript">			
+			function updateForm(method) {
+				$("div input").hide();
+				$("div input."+method).show();
+				
+				$("div button").prop("disabled", method === "none");
+			}
+			
+			function sendRequest() {
+				var params, url;
+				switch($("#method").val()) {
+					case "get" :
+						url = "index.php";
+						params = {
+							from: $("#from").val(),
+							to: $("#to").val(),
+							amnt: $("#amnt").val(),
+							format: $("#format").val()
+						};
+						break;
+					case "put" :
+						url = "currPut.php";
+						params = {
+							code: $("#code").val()
+						};
+						break;
+					case "post" :
+						url = "currPost.php";
+						params = {
+							code: $("#code").val(),
+							rate: $("#rate").val()
+						};
+						break;
+					case "delete" :
+						url = "currDelete.php";
+						params = {
+							code: $("#code").val()
+						};
+						break;
+				}
+				
+				$.get(url, params, function(response) {
+					$("#response").val(response);
+				}, "text");
+			}
+		</script>
+	</head>
+	<body>
+		<div>
+			<h1>Currency Conversion API</h1>
+			<select id="method" onchange="updateForm($(this).val())">
+				<option value="none">Please Select a Method</option>
+				<option value="get">GET (Get a conversion between two currencies)</option>
+				<option value="put">PUT (Add a new ISO currency into the data set)</option>
+				<option value="post">POST (Update the value of an existing currency in the data set)</option>
+				<option value="delete">DELETE (Remove a currency from the data set)</option>
+			</select>
+			<input type="text" placeholder="From Currency" class="get" id="from"/>
+			<input type="text" placeholder="To Currency" class="get" id="to"/>
+			<input type="text" placeholder="Currency Code" class="post put delete" id="code"/>
+			<input type="text" placeholder="Amount" class="get" id="amnt"/>
+			<input type="text" placeholder="Exchange Rate" class="post" id="rate"/>
+			<input type="text" placeholder="Format" class="get" id="format"/>
+			<button onclick="sendRequest()" disabled>Submit</button>
+			<textarea id="response" placeholder="Your response will show here."></textarea>
+			<ul>
+				<li><a href="rates.xml">Rates File</a></li>
+				<li><a href="currencies.xml">Currencies File</a></li>
+			</ul>
+		</div>
+	</body>
+</html>
