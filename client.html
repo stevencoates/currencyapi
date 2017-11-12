@@ -49,8 +49,15 @@
 				
 				$.get(url, params, function(response) {
 					$("#response").val(response);
+					$("input").val("");
+					$("#method").val("none");
 				}, "text");
 			}
+			
+			$(document).ready(function() {
+				$("#method").val("none");
+				updateForm("none");
+			});
 		</script>
 	</head>
 	<body>
@@ -72,8 +79,8 @@
 			<button onclick="sendRequest()" disabled>Submit</button>
 			<textarea id="response" placeholder="Your response will show here."></textarea>
 			<ul>
-				<li><a href="rates.xml">Rates File</a></li>
-				<li><a href="currencies.xml">Currencies File</a></li>
+				<li><a target="_blank" href="rates.xml">Rates File</a></li>
+				<li><a target="_blank" href="currencies.xml">Currencies File</a></li>
 			</ul>
 		</div>
 	</body>

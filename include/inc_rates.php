@@ -64,43 +64,50 @@ class currencyapi {
 	 * and stores them in an XML file to be referenced along with exchange rates.
 	 */
 	private function initialise_currencies() {
-		$countries = new DOMDocument();
-		$countries->load(CURRENCIES_SOURCE);
-		
-		$currencies = array();
-		//First process the raw data so that it is grouped by currency, not country
-		foreach($countries->getElementsByTagName("CcyNtry") AS $currency) {
-			//Check that the currency has all valid data
-			if($currency->getElementsByTagName("Ccy")->length) {
-				//Check if a currency has yet been processed with this code
-				if(!isset($currencies[$currency->getElementsByTagName("Ccy")->item(0)->nodeValue])) {
-					$currencies[$currency->getElementsByTagName("Ccy")->item(0)->nodeValue] =
-						array(
-							'code' => $currency->getElementsByTagName("Ccy")->item(0)->nodeValue,
-							'curr' => $currency->getElementsByTagName("CcyNm")->item(0)->nodeValue,
-							'loc' => array(),
-							'amnt' => 0
-						);
+		//Check that the source file can be located
+		if(file_exists(CURRENCIES_SOURCE)) {
+			$countries = new DOMDocument();
+			$countries->load(CURRENCIES_SOURCE);
+
+			$currencies = array();
+			//First process the raw data so that it is grouped by currency, not country
+			foreach($countries->getElementsByTagName("CcyNtry") AS $currency) {
+				//Check that the currency has all valid data
+				if($currency->getElementsByTagName("Ccy")->length) {
+					//Check if a currency has yet been processed with this code
+					if(!isset($currencies[$currency->getElementsByTagName("Ccy")->item(0)->nodeValue])) {
+						$currencies[$currency->getElementsByTagName("Ccy")->item(0)->nodeValue] =
+							array(
+								'code' => $currency->getElementsByTagName("Ccy")->item(0)->nodeValue,
+								'curr' => $currency->getElementsByTagName("CcyNm")->item(0)->nodeValue,
+								'loc' => array(),
+								'amnt' => 0
+							);
+					}
+					//Add the location in to the currency's object
+					$currencies[$currency->getElementsByTagName("Ccy")->item(0)->nodeValue]['loc'][] =
+						$currency->getElementsByTagName("CtryNm")->item(0)->nodeValue;
 				}
-				//Add the location in to the currency's object
-				$currencies[$currency->getElementsByTagName("Ccy")->item(0)->nodeValue]['loc'][] =
-					$currency->getElementsByTagName("CtryNm")->item(0)->nodeValue;
 			}
+
+			//Piece together the new XML document with all 
+			$root = $this->currencies->createElement("currencies");
+			$this->currencies->appendChild($root);
+			foreach($currencies AS $currency) {
+				$item = $this->currencies->createElement("currency");
+				$root->appendChild($item);
+				$item->appendChild($this->currencies->createElement("code", $currency['code']));
+				$item->appendChild($this->currencies->createElement("name", $currency['curr']));
+				$item->appendChild($this->currencies->createElement("location", join(", ", $currency['loc'])));
+			}
+
+			//Write the XML out to a file
+			$this->currencies->save(CURRENCIES_FILE);
 		}
-		
-		//Piece together the new XML document with all 
-		$root = $this->currencies->createElement("currencies");
-		$this->currencies->appendChild($root);
-		foreach($currencies AS $currency) {
-			$item = $this->currencies->createElement("currency");
-			$root->appendChild($item);
-			$item->appendChild($this->currencies->createElement("code", $currency['code']));
-			$item->appendChild($this->currencies->createElement("name", $currency['curr']));
-			$item->appendChild($this->currencies->createElement("location", join(", ", $currency['loc'])));
+		//If the file cannot be found, set an error in service
+		else {
+			$this->set_error(1500);
 		}
-		
-		//Write the XML out to a file
-		$this->currencies->save(CURRENCIES_FILE);
 	}
 	
 	/**
@@ -142,42 +149,56 @@ class currencyapi {
 	 * @param array $currencies An array containing three letter ISO currencies.
 	 */
 	private function fetch_rates($currencies) {
-		$data = file_get_contents(RATES_SOURCE.RATES_KEY);
-		$rates = json_decode($data, true);
+		//Check that the source file can be located
+		if(file_exists(RATES_SOURCE.RATES_KEY)) {
+			$data = file_get_contents(RATES_SOURCE.RATES_KEY);
+			$rates = json_decode($data, true);
+			
+			//Check that the file has no error (e.g. invalid key, limit reached)
+			if(!isset($rates['error'])) {
+				//Initialize (or re-initialize to be clear) the DOMDocument
+				$this->rates = new DOMDocument();
 
-		//Initialize (or re-initialize to be clear) the DOMDocument
-		$this->rates = new DOMDocument();
-		
-		$root = $this->rates->createElement("rates");
-		$this->rates->appendChild($root);
-		//Loop through each of the desired currencies
-		foreach($currencies AS $currency) {
-			//Ensure that the rate exists in data
-			if(isset($rates['rates'][$currency])) {
-				$element = $this->rates->createElement("rate");
-				$root->appendChild($element);
+				$root = $this->rates->createElement("rates");
+				$this->rates->appendChild($root);
+				//Loop through each of the desired currencies
+				foreach($currencies AS $currency) {
+					//Ensure that the rate exists in data
+					if(isset($rates['rates'][$currency])) {
+						$element = $this->rates->createElement("rate");
+						$root->appendChild($element);
 
-				//Write all of the data in as attributes
-				$codeAttribute = $this->rates->createAttribute("code");
-				$codeAttribute->value = $currency;
-				$element->appendChild($codeAttribute);
+						//Write all of the data in as attributes
+						$codeAttribute = $this->rates->createAttribute("code");
+						$codeAttribute->value = $currency;
+						$element->appendChild($codeAttribute);
 
-				$valueAttribute = $this->rates->createAttribute("value");
-				$valueAttribute->value = $rates['rates'][$currency];
-				$element->appendChild($valueAttribute);
+						$valueAttribute = $this->rates->createAttribute("value");
+						$valueAttribute->value = $rates['rates'][$currency];
+						$element->appendChild($valueAttribute);
 
-				$timeAttribute = $this->rates->createAttribute("timestamp");
-				$timeAttribute->value = $rates['timestamp'];
-				$element->appendChild($timeAttribute);
+						$timeAttribute = $this->rates->createAttribute("timestamp");
+						$timeAttribute->value = $rates['timestamp'];
+						$element->appendChild($timeAttribute);
+					}
+					//Otherwise set an error for the current request
+					else {
+						$this->set_error(1200);
+					}
+				}
+
+				//Save the XML regardless of an error encountered, removing any invalid currencies
+				$this->rates->save(RATES_FILE);
 			}
-			//Otherwise set an error for the current request
+			//If an error is in the file, set an error in service
 			else {
-				$this->set_error(1200);
+				$this->set_error(1500);
 			}
 		}
-
-		//Save the XML regardless of an error encountered, removing any invalid currencies
-		$this->rates->save(RATES_FILE);
+		//If the file cannot be found, set an error in service
+		else {
+			$this->set_error(1500);
+		}
 	}
 	
 	/**
@@ -198,6 +219,11 @@ class currencyapi {
 		return $result;
 	}
 	
+	/**
+	 * This function checks whether a currency is valid in our set of ISO currencies.
+	 * @param string $currency The three letter ISO currency code to be checked.
+	 * @return boolean Whether or not the currency is valid.
+	 */
 	private function validate_currency($currency) {
 		$query = new DOMXpath($this->currencies);
 		$result = $query->evaluate("//currency[code='{$currency}']");
@@ -321,6 +347,11 @@ class currencyapi {
 		return $toRate / $fromRate;
 	}
 	
+	/**
+	 * This function adds a new exchange rate into our set of rates.
+	 * @param string $currency The three letter ISO currency code to add.
+	 * @return boolean Whether the value was successfully inserted or not.
+	 */
 	private function insert_rate($currency) {
 		if($this->validate_currency($currency)) {
 			//Update the rates with the new currency added in
@@ -335,6 +366,10 @@ class currencyapi {
 		return $result;
 	}
 	
+	/**
+	 * This function removes a specified exchange rate from our set of rates.
+	 * @param string $currency The three letter ISO currency code to remove.
+	 */
 	private function remove_rate($currency) {
 		$query = new DOMXpath($this->rates);
 		$rates = $query->query("//rate[@code='{$currency}']");
@@ -348,6 +383,12 @@ class currencyapi {
 		$this->rates->save(RATES_FILE);
 	}
 	
+	/**
+	 * This function edits the exchange rate of an existing currency in our set of rates.
+	 * @param string $currency The three letter ISO currency code to edit.
+	 * @param float $value The exchange rate to apply to our currency.
+	 * @return boolean Whether the rate was successfully edited or not.
+	 */
 	private function edit_rate($currency, $value) {
 		//Check that a valid rate is being given
 		if(!preg_match('/^\d+\.\d+$/', (string)$value)) {
@@ -407,6 +448,10 @@ class currencyapi {
 		return $valid;
 	}
 	
+	/**
+	 * This function gives the response from our API call as set up so far.
+	 * @return string This returns the raw XML for our response.
+	 */
 	private function response() {
 		if($this->error) {
 			$error = $this->response->createElement("error");
@@ -422,6 +467,10 @@ class currencyapi {
 		return $this->response->saveXML();
 	}
 	
+	/**
+	 * This function outputs the API's response in a given format.
+	 * @param string $format The format to output our response, expecting "xml" or "json".
+	 */
 	private function send_response($format = DEFAULT_FORMAT) {
 		//Set JSON headers if specified
 		if(strtolower($format) === "json") {
@@ -443,12 +492,21 @@ class currencyapi {
 		}
 	}
 	
+	/**
+	 * This function sets an error to our request, if one has not been encountered yet.
+	 * @param int $error The error code encountered.
+	 */
 	private function set_error($error) {
 		if(!$this->error) {
 			$this->error = $error;
 		}
 	}
 	
+	/**
+	 * This function completes a get request (converting between currencies).
+	 * @param array $parameters The parameters sent by the request, expecting 'from',
+	 * 'to', 'amnt' and 'format'.
+	 */
 	public function get($parameters) {
 		$requiredParameters = array(
 			'from',
@@ -467,6 +525,11 @@ class currencyapi {
 		$this->send_response(isset($parameters['format']) ? $parameters['format'] : null);
 	}
 
+	/**
+	 * This function completes a post request (updating a currency's exchange rate).
+	 * @param array $parameters The parameters sent by the request, expecting 'code'
+	 * and 'rate'.
+	 */
 	public function post($parameters) {
 		$requiredParameters = array(
 //			'method',
@@ -483,6 +546,10 @@ class currencyapi {
 		$this->send_response();
 	}
 
+	/**
+	 * This function completes a put request (adding a new currency in).
+	 * @param array $parameters The parameters sent by the request, expecting 'code'.
+	 */
 	public function put($parameters) {
 		$requiredParameters = array(
 //			'method',
@@ -498,6 +565,10 @@ class currencyapi {
 		$this->send_response();
 	}
 
+	/**
+	 * This function completes a delete request (removing a currency).
+	 * @param array $parameters The parameters sent by the request, expecting 'code'.
+	 */
 	public function delete($parameters) {
 		$requiredParameters = array(
 //			'method',
@@ -513,4 +584,3 @@ class currencyapi {
 		$this->send_response();		
 	}
 }
-	
