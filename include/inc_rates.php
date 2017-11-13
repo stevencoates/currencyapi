@@ -53,9 +53,18 @@ class currencyapi {
 			$this->rates->load(RATES_FILE);
 		}
 		
-		//TODO check through all rates here and then update if needed
-		if(false) {
-			$this->update_rates();
+		//Set up timestamps to check for the 12 hour cutoff
+		$timestamp = new DateTime();
+		$cutoff = new DateTime();
+		$cutoff->modify("-12 hours");
+		//Loop through to check each rate's timestamp
+		foreach($this->rates->getElementsByTagName("rates") AS $rate) {
+			$timestamp->setTimestamp($rate->getAttribute("timestamp"));
+			//If the timestamp is before the 12 hour cutoff, update all rates
+			if($timestamp < $cutoff) {
+				$this->update_rates();
+				break;
+			}
 		}
 	}
     
