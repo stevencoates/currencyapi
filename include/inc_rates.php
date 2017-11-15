@@ -52,14 +52,14 @@ class currencyapi {
 		else {
 			$this->rates->load(RATES_FILE);
 		}
-		
+
 		//Set up timestamps to check for the 12 hour cutoff
 		$timestamp = new DateTime();
 		$cutoff = new DateTime();
 		$cutoff->modify("-12 hours");
 		//Loop through to check each rate's timestamp
 		foreach($this->rates->getElementsByTagName("rates") AS $rate) {
-			$timestamp->setTimestamp($rate->getAttribute("timestamp"));
+			$timestamp->setTimestamp((int)$rate->getAttribute("timestamp"));
 			//If the timestamp is before the 12 hour cutoff, update all rates
 			if($timestamp < $cutoff) {
 				$this->update_rates();
@@ -74,10 +74,8 @@ class currencyapi {
 	 */
 	private function initialise_currencies() {
 		//Check that the source file can be located
-		if(file_exists(CURRENCIES_SOURCE)) {
-			$countries = new DOMDocument();
-			$countries->load(CURRENCIES_SOURCE);
-
+		$countries = new DOMDocument();
+		if(@$countries->load(CURRENCIES_SOURCE)) {
 			$currencies = array();
 			//First process the raw data so that it is grouped by currency, not country
 			foreach($countries->getElementsByTagName("CcyNtry") AS $currency) {
@@ -159,55 +157,55 @@ class currencyapi {
 	 */
 	private function fetch_rates($currencies) {
 		//Check that the source file can be located
-		if(file_exists(RATES_SOURCE.RATES_KEY)) {
-			$data = file_get_contents(RATES_SOURCE.RATES_KEY);
-			$rates = json_decode($data, true);
-			
-			//Check that the file has no error (e.g. invalid key, limit reached)
-			if(!isset($rates['error'])) {
-				//Initialize (or re-initialize to be clear) the DOMDocument
-				$this->rates = new DOMDocument();
+        $data = @file_get_contents(RATES_SOURCE.RATES_KEY);
+        if($data) {
+            $rates = json_decode($data, true);
 
-				$root = $this->rates->createElement("rates");
-				$this->rates->appendChild($root);
-				//Loop through each of the desired currencies
-				foreach($currencies AS $currency) {
-					//Ensure that the rate exists in data
-					if(isset($rates['rates'][$currency])) {
-						$element = $this->rates->createElement("rate");
-						$root->appendChild($element);
+            //Check that the file has no error (e.g. invalid key, limit reached)
+            if(!isset($rates['error'])) {
+                //Initialize (or re-initialize to be clear) the DOMDocument
+                $this->rates = new DOMDocument();
 
-						//Write all of the data in as attributes
-						$codeAttribute = $this->rates->createAttribute("code");
-						$codeAttribute->value = $currency;
-						$element->appendChild($codeAttribute);
+                $root = $this->rates->createElement("rates");
+                $this->rates->appendChild($root);
+                //Loop through each of the desired currencies
+                foreach($currencies AS $currency) {
+                    //Ensure that the rate exists in data
+                    if(isset($rates['rates'][$currency])) {
+                        $element = $this->rates->createElement("rate");
+                        $root->appendChild($element);
 
-						$valueAttribute = $this->rates->createAttribute("value");
-						$valueAttribute->value = $rates['rates'][$currency];
-						$element->appendChild($valueAttribute);
+                        //Write all of the data in as attributes
+                        $codeAttribute = $this->rates->createAttribute("code");
+                        $codeAttribute->value = $currency;
+                        $element->appendChild($codeAttribute);
 
-						$timeAttribute = $this->rates->createAttribute("timestamp");
-						$timeAttribute->value = $rates['timestamp'];
-						$element->appendChild($timeAttribute);
-					}
-					//Otherwise set an error for the current request
-					else {
-						$this->set_error(1200);
-					}
-				}
+                        $valueAttribute = $this->rates->createAttribute("value");
+                        $valueAttribute->value = $rates['rates'][$currency];
+                        $element->appendChild($valueAttribute);
 
-				//Save the XML regardless of an error encountered, removing any invalid currencies
-				$this->rates->save(RATES_FILE);
-			}
-			//If an error is in the file, set an error in service
-			else {
-				$this->set_error(1500);
-			}
-		}
-		//If the file cannot be found, set an error in service
-		else {
-			$this->set_error(1500);
-		}
+                        $timeAttribute = $this->rates->createAttribute("timestamp");
+                        $timeAttribute->value = $rates['timestamp'];
+                        $element->appendChild($timeAttribute);
+                    }
+                    //Otherwise set an error for the current request
+                    else {
+                        $this->set_error(1200);
+                    }
+                }
+
+                //Save the XML regardless of an error encountered, removing any invalid currencies
+    //                echo "rates saved";
+                $this->rates->save(RATES_FILE);
+            }
+            //If an error is in the file, set an error in service
+            else {
+                $this->set_error(1500);
+            }
+        }
+        else {
+            $this->set_error(1500);
+        }
 	}
 	
 	/**
@@ -352,8 +350,16 @@ class currencyapi {
 	private function conversion_rate($from, $to) {
 		$fromRate = $this->check_rate($from);
 		$toRate = $this->check_rate($to);
-		
-		return $toRate / $fromRate;
+        
+        if($toRate && $fromRate) {
+            $result = $toRate / $fromRate;
+        }
+        else {
+            $result = false;
+            $this->set_error(1500);
+        }
+	
+		return $result;
 	}
 	
 	/**

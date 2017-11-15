@@ -6,55 +6,59 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <link rel="stylesheet" href="css/style.css"/>
         <script src="js/jquery-3.2.1.min.js"></script>
-        <script type="text/javascript">			
+        <script type="text/javascript">
             function updateForm(method) {
+                //Hide all inputs that are not related to the given method
                 $("div input").hide();
                 $("div input."+method).show();
 
+                //Enable the button if a method is selected
                 $("div button").prop("disabled", method === "none");
             }
 
             function sendRequest() {
                 var params, url;
+                //Assign the parameters and request URL basd on our method
                 switch($("#method").val()) {
-                        case "get" :
-                                url = "index.php";
-                                params = {
-                                        from: $("#from").val(),
-                                        to: $("#to").val(),
-                                        amnt: $("#amnt").val(),
-                                        format: $("#format").val()
-                                };
-                                break;
-                        case "put" :
-                                url = "currPut.php";
-                                params = {
-                                        code: $("#code").val()
-                                };
-                                break;
-                        case "post" :
-                                url = "currPost.php";
-                                params = {
-                                        code: $("#code").val(),
-                                        rate: $("#rate").val()
-                                };
-                                break;
-                        case "delete" :
-                                url = "currDelete.php";
-                                params = {
-                                        code: $("#code").val()
-                                };
-                                break;
+                    case "get" :
+                        url = "index.php";
+                        params = {
+                            from: $("#from").val(),
+                            to: $("#to").val(),
+                            amnt: $("#amnt").val(),
+                            format: $("#format").val()
+                        };
+                        break;
+                    case "put" :
+                        url = "currPut.php";
+                        params = {
+                            code: $("#code").val()
+                        };
+                        break;
+                    case "post" :
+                        url = "currPost.php";
+                        params = {
+                            code: $("#code").val(),
+                            rate: $("#rate").val()
+                        };
+                        break;
+                    case "delete" :
+                        url = "currDelete.php";
+                        params = {
+                            code: $("#code").val()
+                        };
+                        break;
                 }
 
+                //Send the AJAX request, specifying the response as text
                 $.get(url, params, function(response) {
-                        $("#response").val(response);
-                        $("input").val("");
-                        $("#method").val("none");
+                    $("#response").val(response);
+                    resetForm();
                 }, "text");
             }
 
             function resetForm() {
+                //Clear all form inputs and reset the form to have no method
                 $("input").val("");
                 $("#method").val("none");
                 updateForm("none");
