@@ -58,8 +58,8 @@ class currencyapi {
 		$cutoff = new DateTime();
 		$cutoff->modify("-12 hours");
 		//Loop through to check each rate's timestamp
-		foreach($this->rates->getElementsByTagName("rates") AS $rate) {
-			$timestamp->setTimestamp((int)$rate->getAttribute("timestamp"));
+		foreach($this->rates->getElementsByTagName("rate") AS $rate) {
+			$timestamp->setTimestamp($rate->getAttribute("timestamp"));
 			//If the timestamp is before the 12 hour cutoff, update all rates
 			if($timestamp < $cutoff) {
 				$this->update_rates();
@@ -172,21 +172,21 @@ class currencyapi {
                 foreach($currencies AS $currency) {
                     //Ensure that the rate exists in data
                     if(isset($rates['rates'][$currency])) {
-                        $element = $this->rates->createElement("rate");
-                        $root->appendChild($element);
+                        $node = $this->rates->createElement("rate");
+                        $root->appendChild($node);
 
                         //Write all of the data in as attributes
                         $codeAttribute = $this->rates->createAttribute("code");
                         $codeAttribute->value = $currency;
-                        $element->appendChild($codeAttribute);
+                        $node->appendChild($codeAttribute);
 
                         $valueAttribute = $this->rates->createAttribute("value");
                         $valueAttribute->value = $rates['rates'][$currency];
-                        $element->appendChild($valueAttribute);
+                        $node->appendChild($valueAttribute);
 
                         $timeAttribute = $this->rates->createAttribute("timestamp");
                         $timeAttribute->value = $rates['timestamp'];
-                        $element->appendChild($timeAttribute);
+                        $node->appendChild($timeAttribute);
                     }
                     //Otherwise set an error for the current request
                     else {
@@ -249,7 +249,7 @@ class currencyapi {
 	 */
 	private function currency_name($currency) {
 		$query = new DOMXpath($this->currencies);
-		$result = $query->evaluate("string(//currency[code='{$currency}']/name");
+		$result = $query->evaluate("string(//currency[code='{$currency}']/name)");
 		
 		//If no valid result is found, set an error
 		if(!is_string($result)) {
@@ -439,13 +439,15 @@ class currencyapi {
 	 * @param array $givenParameters An array of parameters, indexed by name.
 	 * @return boolean Whether or not all (and only) required parameters are set.
 	 */
-	private function check_parameters($requiredParameters, $givenParameters) {
+	private function check_parameters($requiredParameters, &$givenParameters) {
 		$valid = true;
+		//Take a copy of the given parameters to destructively check
+		$checkParameters = $givenParameters;
 		//Loop through each required parameter to compare
 		foreach($requiredParameters AS $required) {
 			//Unset the proper parameters, so we can check for any unrecognized
-			if(isset($givenParameters[$required]) && $givenParameters[$required] != "") {
-				unset($givenParameters[$required]);
+			if(isset($checkParameters[$required]) && $checkParameters[$required] != "") {
+				unset($checkParameters[$required]);
 			}
 			//If a required parameter is not found set an error
 			else {
@@ -455,12 +457,61 @@ class currencyapi {
 		}
 		
 		//If there are any additional parameters given (unrecognized) set an error
-		if(count($givenParameters)) {
+		if(count($checkParameters)) {
 			$this->set_error(1100);
 			$valid = false;
 		}
 		
+		//Run all of the given parameters through strtoupper
+		$givenParameters = array_map("strtoupper", $givenParameters);
+		
 		return $valid;
+	}
+	
+	/**
+	 * This function creates the root node of the response object, based on the
+	 * method provided.
+	 * @param string $method The method type used. If not provided, root will be conv.
+	 */
+	private function write_root($method = null) {
+		//If a method is provided (PUT, POST, DELETE requests, we want a method root node
+		if(isset($method)) {
+			$this->root = $this->response->createElement("method");
+
+			//Add in the type attribute on the root node
+			$methodAttribute = $this->response->createAttribute("type");
+			$methodAttribute->value = $method;
+			$this->root->appendChild($methodAttribute);	
+		}
+		//Otherwise provide a conv root node
+		else {
+			$this->root = $this->response->createElement("conv");
+		}
+		
+		$timestamp = new DateTime();
+		$timeNode = $this->response->createElement("at", $timestamp->format("d M Y g:i"));
+		$this->root->appendChild($timeNode);
+		
+		$this->response->appendChild($this->root);
+	}
+	
+	private function currency_details($parent, $currency, $amount = null) {
+		$codeNode = $this->response->createElement("code", $currency);
+		$parent->appendChild($codeNode);
+		
+		//Set the label name based on if an amount is given (i.e. it is a GET request)
+		$label = isset($amount) ? "curr" : "name";
+		$nameNode = $this->response->createElement($label, $this->currency_name($currency));
+		$parent->appendChild($nameNode);
+		
+		$locNode = $this->response->createElement("loc", $this->currency_location($currency));
+		$parent->appendChild($locNode);
+		
+		//Add in the amount node, if a value is provided
+		if(isset($amount)) {
+			$amountNode = $this->response->createElement("amnt", $amount);
+			$parent->appendChild($amountNode);
+		}
 	}
 	
 	/**
@@ -469,6 +520,11 @@ class currencyapi {
 	 */
 	private function response() {
 		if($this->error) {
+			//Empty the current response of all child nodes
+			while($this->root->hasChildNodes()) {
+				$this->root->removeChild($this->root->firstChild);
+			}
+			
 			$error = $this->response->createElement("error");
 			$this->root->appendChild($error);
 
@@ -491,8 +547,10 @@ class currencyapi {
 		if(strtolower($format) === "json") {
 			header("Content-type: application/json");
 			
-			//TODO format as JSON instead of XML, json_encode not sufficient
-			echo json_encode(simplexml_load_string($this->response()), JSON_PRETTY_PRINT);
+			//Load the DOMDocument to simplexml instead, for conversion to JSON
+			$simple = simplexml_load_string($this->response());
+			//Provide the root node as an array key to encode
+			echo json_encode(array($simple->getName() => $simple), JSON_PRETTY_PRINT);
 		}
 		//Otherwise default to XML headers
 		else {
@@ -529,13 +587,24 @@ class currencyapi {
 			'amnt',
 			'format'
 		);
+		
+		$this->write_root();
+		
 		//Check that all parameters given are correct
 		if($this->check_parameters($requiredParameters, $parameters)) {
-			$this->convert($parameters['from'], $parameters['to'], $parameters['amnt']);
+			$rate = $this->conversion_rate($parameters['from'], $parameters['to']);
+			$rateNode =	$this->response->createElement("rate", $rate);
+			$this->root->appendChild($rateNode);
+			
+			$fromNode = $this->response->createElement("from");
+			$this->currency_details($fromNode, $parameters['from'], $parameters['amnt']);
+			$this->root->appendChild($fromNode);
+			
+			$conversion = $this->convert($parameters['from'], $parameters['to'], $parameters['amnt']);
+			$toNode = $this->response->createElement("to");
+			$this->currency_details($toNode, $parameters['to'], $conversion);
+			$this->root->appendChild($toNode);
 		}
-		
-		$this->root = $this->response->createElement("conv");
-		$this->response->appendChild($this->root);
 		
 		$this->send_response(isset($parameters['format']) ? $parameters['format'] : null);
 	}
@@ -551,12 +620,29 @@ class currencyapi {
 			'code',
 			'rate'
 		);
-		if($this->check_parameters($requiredParameters, $parameters)) {
-			$this->edit_rate($parameters['code'], $parameters['rate']);
-		}
 		
-		$this->root = $this->response->createElement("conv");
-		$this->response->appendChild($this->root);
+		$this->write_root("post");
+		
+		if($this->check_parameters($requiredParameters, $parameters)) {
+			$currNode = $this->response->createElement("curr");
+			$this->currency_details($currNode, $parameters['code']);
+			
+			$previousNode = $this->response->createElement("previous");
+			
+			$previousRateNode = $this->response->createElement("rate", $this->check_rate($parameters['code']));
+			$previousNode->appendChild($previousRateNode);
+			$previousNode->appendChild(clone $currNode);
+			$this->root->appendChild($previousNode);
+			
+			$this->edit_rate($parameters['code'], $parameters['rate']);
+			
+			$newNode = $this->response->createElement("new");
+			
+			$newRateNode = $this->response->createElement("rate", $this->check_rate($parameters['code']));
+			$newNode->appendChild($newRateNode);
+			$newNode->appendChild(clone $currNode);
+			$this->root->appendChild($newNode);
+		}
 		
 		$this->send_response();
 	}
@@ -570,12 +656,19 @@ class currencyapi {
 //			'method',
 			'code'
 		);
-		if($this->check_parameters($requiredParameters, $parameters)) {
-			$this->insert_rate($parameters['code']);
-		}
 
-		$this->root = $this->response->createElement("conv");
-		$this->response->appendChild($this->root);
+		$this->write_root("put");
+		
+		if($this->check_parameters($requiredParameters, $parameters)) {
+			$this->insert_rate(strtoupper($parameters['code']));
+			
+			$rate = $this->check_rate($parameters['code']);
+			$this->root->appendChild($this->response->createElement("rate", $rate));
+			
+			$currNode = $this->response->createElement("curr");
+			$this->currency_details($currNode, $parameters['code']);
+			$this->root->appendChild($currNode);
+		}
 		
 		$this->send_response();
 	}
@@ -589,12 +682,14 @@ class currencyapi {
 //			'method',
 			'code'
 		);
+
+		$this->write_root("delete");
+		
 		if($this->check_parameters($requiredParameters, $parameters)) {
 			$this->remove_rate($parameters['code']);
+			
+			$this->root->appendChild($this->response->createElement("code", $parameters['code']));
 		}
-
-		$this->root = $this->response->createElement("conv");
-		$this->response->appendChild($this->root);
 		
 		$this->send_response();		
 	}
