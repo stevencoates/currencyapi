@@ -181,7 +181,8 @@ class currencyapi {
                         $node->appendChild($codeAttribute);
 
                         $valueAttribute = $this->rates->createAttribute("value");
-                        $valueAttribute->value = $rates['rates'][$currency];
+						//The values all need adjusting by the base currency
+                        $valueAttribute->value = $rates['rates'][$currency]/$rates['rates'][BASE_CURRENCY];
                         $node->appendChild($valueAttribute);
 
                         $timeAttribute = $this->rates->createAttribute("timestamp");
@@ -443,27 +444,35 @@ class currencyapi {
 		$valid = true;
 		//Take a copy of the given parameters to destructively check
 		$checkParameters = $givenParameters;
-		//Loop through each required parameter to compare
-		foreach($requiredParameters AS $required) {
-			//Unset the proper parameters, so we can check for any unrecognized
-			if(isset($checkParameters[$required]) && $checkParameters[$required] != "") {
-				unset($checkParameters[$required]);
+		//First check we have an array at all
+		if(is_array($givenParameters)) {
+			//Loop through each required parameter to compare
+			foreach($requiredParameters AS $required) {
+				//Unset the proper parameters, so we can check for any unrecognized
+				if(isset($checkParameters[$required]) && $checkParameters[$required] != "") {
+					unset($checkParameters[$required]);
+				}
+				//If a required parameter is not found set an error
+				else {
+					$this->set_error(1000);
+					$valid = false;
+				}
 			}
-			//If a required parameter is not found set an error
-			else {
-				$this->set_error(1000);
+
+			//If there are any additional parameters given (unrecognized) set an error
+			if(count($checkParameters)) {
+				$this->set_error(1100);
 				$valid = false;
 			}
+
+			//Run all of the given parameters through strtoupper
+			$givenParameters = array_map("strtoupper", $givenParameters);
 		}
-		
-		//If there are any additional parameters given (unrecognized) set an error
-		if(count($checkParameters)) {
-			$this->set_error(1100);
+		//If not, no parameters were set
+		else {
+			$this->set_error(1000);
 			$valid = false;
 		}
-		
-		//Run all of the given parameters through strtoupper
-		$givenParameters = array_map("strtoupper", $givenParameters);
 		
 		return $valid;
 	}
