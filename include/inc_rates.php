@@ -1,4 +1,5 @@
 <?php
+require_once("inc_error.php");
 
 /**
  * This class is put together to contain all valid currencies stored by the
@@ -10,7 +11,7 @@ class currencyapi {
 	//An XML object containing codes and exchange rates for all selected currencies
 	private $rates;
 
-	//Any error code that has been set, defaults to false on construction
+	//Any error object that has been set, defaults to false on construction
 	private $error;
 	
 	//The XML object to send as a response
@@ -31,8 +32,7 @@ class currencyapi {
 		$this->response = new DOMDocument('1.0', 'UTF-8');
 		$this->response->preserveWhiteSpace = false;
 		$this->response->formatOutput = true;
-		//Set the error to false, any number later assigned will pass as true
-		$this->set_error(false);
+		$this->error = new apierror();
 		
 		//Temporary success body made here, need to format successful response
 		$this->body = $this->response->createElement("successful");
@@ -113,7 +113,7 @@ class currencyapi {
 		}
 		//If the file cannot be found, set an error in service
 		else {
-			$this->set_error(1500);
+			$this->error->set(1500);
 		}
 	}
 	
@@ -191,7 +191,7 @@ class currencyapi {
                     }
                     //Otherwise set an error for the current request
                     else {
-                        $this->set_error(1200);
+                        $this->error->set(1200);
                     }
                 }
 
@@ -201,11 +201,11 @@ class currencyapi {
             }
             //If an error is in the file, set an error in service
             else {
-                $this->set_error(1500);
+                $this->error->set(1500);
             }
         }
         else {
-            $this->set_error(1500);
+            $this->error->set(1500);
         }
 	}
 	
@@ -220,7 +220,7 @@ class currencyapi {
 		
 		//If no valid result is found, set an error
 		if(is_nan($result)) {
-			$this->set_error(1200);
+			$this->error->set(1200);
 			$result = false;
 		}
 		
@@ -237,7 +237,7 @@ class currencyapi {
 		$result = $query->evaluate("//currency[code='{$currency}']");
 		
 		if(!$result) {
-			$this->set_error(2200);
+			$this->error->set(2200);
 		}
 		
 		return (bool)$result;
@@ -254,7 +254,7 @@ class currencyapi {
 		
 		//If no valid result is found, set an error
 		if(!is_string($result)) {
-			$this->set_error(1200);
+			$this->error->set(1200);
 			$result = false;
 		}
 		
@@ -272,47 +272,11 @@ class currencyapi {
 		
 		//If no valid result is found, set an error
 		if(!is_string($result)) {
-			$this->set_error(1200);
+			$this->error->set(1200);
 			$result = false;
 		}
 		
 		return $result;
-	}
-	
-	/**
-	 * This function returns any given error code in the API's runtime
-	 */
-	public function error() {
-		return $this->error;
-	}
-	
-	/**
-	 * This function looks up the relevant error message for the most recent error
-	 * encountered in the API.
-	 * @return string The error message encountered, or false if no error occurred
-	 */
-	public function error_message() {
-		switch($this->error) {
-			//Error messages for GET requests
-			case 1000 : $error = "Required parameter is missing"; break;
-			case 1100 : $error = "Parameter not recognized"; break;
-			case 1200 : $error = "Currency type not recognized"; break;
-			case 1300 : $error = "Currency amount must be a decimal number"; break;
-			case 1400 : $error = "Format must be xml or json"; break;
-			case 1500 : $error = "Error in service"; break;
-			
-			//Error messages for POST, PUT and DELETE requests
-			case 2000 : $error = "Method not recognized or is missing"; break;
-			case 2100 : $error = "Rate in wrong format or is missing"; break;
-			case 2200 : $error = "Currency code in wrong format or is missing"; break;
-			case 2300 : $error = "Country name in wrong format or is missing"; break;
-			case 2400 : $error = "Currency code not found for update"; break;
-			case 2500 : $error = "Error in service"; break;
-			
-			default : $error = false; break;
-		}
-		
-		return $error;
 	}
 	
 	/**
@@ -327,13 +291,13 @@ class currencyapi {
 		$rate = $this->conversion_rate($from, $to);
 		
 		//Check that a valid amount is being converted
-		if(!preg_match('/^\d+\.\d+$/', (string)$amount)) {
-			$this->set_error(1300);
+		if(!preg_match('/^\d+\.\d{2}$/', (string)$amount)) {
+			$this->error->set(1300);
 		}
 		
 		//Check no error has been encountered
-		if(!$this->error) {
-			$result = $rate * $amount;
+		if(!$this->error->code()) {
+			$result = round($rate * $amount, 2);
 		}
 		else {
 			$result = false;
@@ -357,7 +321,7 @@ class currencyapi {
         }
         else {
             $result = false;
-            $this->set_error(1500);
+            $this->error->set(1500);
         }
 	
 		return $result;
@@ -408,10 +372,10 @@ class currencyapi {
 	private function edit_rate($currency, $value) {
 		//Check that a valid rate is being given
 		if(!preg_match('/^\d+\.\d+$/', (string)$value)) {
-			$this->set_error(2100);
+			$this->error->set(2100);
 		}
 		
-		if(!$this->error) {
+		if(!$this->error->code()) {
 			$query = new DOMXpath($this->rates);
 			$rates = $query->query("//rate[@code='{$currency}']");
 
@@ -454,14 +418,14 @@ class currencyapi {
 				}
 				//If a required parameter is not found set an error
 				else {
-					$this->set_error(1000);
+					$this->error->set(1000);
 					$valid = false;
 				}
 			}
 
 			//If there are any additional parameters given (unrecognized) set an error
 			if(count($checkParameters)) {
-				$this->set_error(1100);
+				$this->error->set(1100);
 				$valid = false;
 			}
 
@@ -470,7 +434,7 @@ class currencyapi {
 		}
 		//If not, no parameters were set
 		else {
-			$this->set_error(1000);
+			$this->error->set(1000);
 			$valid = false;
 		}
 		
@@ -504,6 +468,12 @@ class currencyapi {
 		$this->response->appendChild($this->root);
 	}
 	
+	/**
+	 * This function writes a set of currency details into a DOM node.
+	 * @param DOMNode $parent The node to write the details into.
+	 * @param string $currency The three letter ISO currency code to check.
+	 * @param float $amount The amount of the currency to include (if any).
+	 */
 	private function currency_details($parent, $currency, $amount = null) {
 		$codeNode = $this->response->createElement("code", $currency);
 		$parent->appendChild($codeNode);
@@ -528,7 +498,7 @@ class currencyapi {
 	 * @return string This returns the raw XML for our response.
 	 */
 	private function response() {
-		if($this->error) {
+		if($this->error->code()) {
 			//Empty the current response of all child nodes
 			while($this->root->hasChildNodes()) {
 				$this->root->removeChild($this->root->firstChild);
@@ -537,10 +507,10 @@ class currencyapi {
 			$error = $this->response->createElement("error");
 			$this->root->appendChild($error);
 
-			$code = $this->response->createElement("code", $this->error);
+			$code = $this->response->createElement("code", $this->error->code());
 			$error->appendChild($code);
 
-			$message = $this->response->createElement("msg", $this->error_message());
+			$message = $this->response->createElement("msg", $this->error->msg());
 			$error->appendChild($message);
 		}
 
@@ -566,21 +536,11 @@ class currencyapi {
 			header("Content-type: text/xml");
 			//If XML was defaulted to, not specified, set an error
 			if(strtolower($format) !== "xml") {
-				$this->set_error(1400);
+				$this->error->set(1400);
 			}
 			
 			//Send the response as XML
 			echo $this->response();
-		}
-	}
-	
-	/**
-	 * This function sets an error to our request, if one has not been encountered yet.
-	 * @param int $error The error code encountered.
-	 */
-	private function set_error($error) {
-		if(!$this->error) {
-			$this->error = $error;
 		}
 	}
 	
