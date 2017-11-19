@@ -14,19 +14,15 @@ body {
 	display: flex;
 	justify-content: center;
 	align-items: center;
-}
-
-body {
 	color: #333;
 	background: #333;
 }
 
-div {
+body > div {
 	max-width: 500px;
 	width: 100%;
 	padding: 25px;
 	background: #EEE;
-	box-shadow: 0 0 20px 0 rgba(0, 0, 0, 0.2), 0 5px 5px 0 rgba(0, 0, 0, 0.24);
 }
 
 div input,

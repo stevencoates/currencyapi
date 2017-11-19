@@ -191,12 +191,11 @@ class currencyapi {
                     }
                     //Otherwise set an error for the current request
                     else {
-                        $this->error->set(1200);
+                        $this->error->set(2200);
                     }
                 }
 
                 //Save the XML regardless of an error encountered, removing any invalid currencies
-    //                echo "rates saved";
                 $this->rates->save(RATES_FILE);
             }
             //If an error is in the file, set an error in service
@@ -354,9 +353,14 @@ class currencyapi {
 		$query = new DOMXpath($this->rates);
 		$rates = $query->query("//rate[@code='{$currency}']");
 
-		//Loop through to remove all instances in case of duplication
-		foreach($rates AS $rate) {
-			$rate->parentNode->removeChild($rate);
+		if($rates->length) {
+			//Loop through to remove all instances in case of duplication
+			foreach($rates AS $rate) {
+				$rate->parentNode->removeChild($rate);
+			}
+		}
+		else {
+			$this->error->set(2200);
 		}
 		
 		//Write over the file with the rate removed
@@ -656,7 +660,7 @@ class currencyapi {
 		
 		if($this->check_parameters($requiredParameters, $parameters)) {
 			$this->remove_rate($parameters['code']);
-			
+
 			$this->root->appendChild($this->response->createElement("code", $parameters['code']));
 		}
 		

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Currency Conversion API Documentation</title>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="../css/documentation.css"/>
+	</head>
+	<body>
+		<header>
+			<h1>Currency Conversion API Documentation</h1>
+			<nav>
+				<a href="#details">Student Details</a>
+				<a href="#tests">Test Outcomes</a>
+				<a href="#links">Links</a>
+				<a href="#evaluation">Critical Evaluation</a>
+			</nav>
+		</header>
+		<main>
+			<section>
+				<a class="anchor" name="details"></a>
+				<h2>Student Details</h2>
+				<p><strong>Username:</strong> sl2-coates</p>
+				<p><strong>Student Number:</strong> 14022138</p>
+			</section>
+			<section>
+				<a class="anchor" name="tests"></a>
+				<h2>Test Outcomes</h2>
+				<table>
+					<tr>
+						<th colspan="4">GET request tests</th>
+					</tr>
+					<tr>
+						<th></th>
+						<th>Test</th>
+						<th>Outcome</th>
+						<th>Comments</th>
+					</tr>
+					<tr>
+						<td>1</td>
+						<td>Convert 10.35 from GBP to EUR with XML format</td>
+						<td class="pass">Passed</td>
+						<td>Amount converted accurately and an XML response was given.</td>
+					</tr>
+					<tr>
+						<td>2</td>
+						<td>Convert 14.85 from NOK to DKK with JSON format</td>
+						<td class="pass">Passed</td>
+						<td>Amount converted accurately and a JSON response was given.</td>
+					</tr>
+					<tr>
+						<td>3</td>
+						<td>Invalid currency provided with JSON format</td>
+						<td class="pass">Passed</td>
+						<td>Error message 1200 was returned in a JSON response.</td>
+					</tr>
+					<tr>
+						<td>4</td>
+						<td>No parameters provided</td>
+						<td class="pass">Passed</td>
+						<td>Error message 1000 was returned in an XML (default) response.</td>
+					</tr>
+					<tr>
+						<td>5</td>
+						<td>One parameter missing, no format specified</td>
+						<td class="pass">Passed</td>
+						<td>Error message 1000 was returned in an XML (default) response.</td>
+					</tr>
+					<tr>
+						<td>6</td>
+						<td>Extra, unknown parameter provided with XML format</td>
+						<td class="pass">Passed</td>
+						<td>Error message 1100 was returned in an XML response.</td>
+					</tr>
+					<tr>
+						<td>7</td>
+						<td>Format given not as XML or JSON</td>
+						<td class="pass">Passed</td>
+						<td>Error message 1400 was returned in an XML (default) response.</td>
+					</tr>
+					<tr>
+						<td>8</td>
+						<td>Amount given is not a decimal number with JSON format</td>
+						<td class="pass">Passed</td>
+						<td>Error message 1300 was returned in a JSON response.</td>
+					</tr>
+					<tr>
+						<td>9</td>
+						<td>Error in service encountered</td>
+						<td class="fail">Failed</td>
+						<td>With the API set up as is, no errors in service will be encountered unless a service used goes offline. This can be verified as working by changing the URL of a service required in the configuration file.</td>
+					</tr>
+					<tr>
+						<th colspan="4">PUT request tests</th>
+					</tr>
+					<tr>
+						<th></th>
+						<th>Test</th>
+						<th>Outcome</th>
+						<th>Comments</th>
+					</tr>
+					<tr>
+						<td>10</td>
+						<td>Add in XCD as a new currency (not yet existing in file)</td>
+						<td class="pass">Passed</td>
+						<td>Currency added in to XML file, with an up to date rate associated with it.</td>
+					</tr>
+					<tr>
+						<td>11</td>
+						<td>Add in USD as a new currency (already existing in file)</td>
+						<td class="pass">Passed</td>
+						<td>Currency was not duplicated, as it already exists, but usual response was given.</td>
+					</tr>
+					<tr>
+						<td>12</td>
+						<td>Add in ABC as a new currency</td>
+						<td class="pass">Passed</td>
+						<td>Error message 2200 was returned.</td>
+					</tr>
+					<tr>
+						<th colspan="4">POST request tests</th>
+					</tr>
+					<tr>
+						<th></th>
+						<th>Test</th>
+						<th>Outcome</th>
+						<th>Comments</th>
+					</tr>
+					<tr>
+						<td>13</td>
+						<td>Update USD's exchange rate to 1.5</td>
+						<td class="pass">Passed</td>
+						<td>Exchange rate updated in XML file, with an updated timestamp.</td>
+					</tr>
+					<tr>
+						<td>14</td>
+						<td>Update ABC's exchange rate to 1.5</td>
+						<td class="pass">Passed</td>
+						<td>Error message 1200 was returned.</td>
+					</tr>
+					<tr>
+						<td>15</td>
+						<td>Update USD's exchange rate with an invalid decimal number</td>
+						<td class="pass">Passed</td>
+						<td>Error message 2100 was returned.</td>
+					</tr>
+					<tr>
+						<th colspan="4">DELETE request tests</th>
+					</tr>
+					<tr>
+						<th></th>
+						<th>Test</th>
+						<th>Outcome</th>
+						<th>Comments</th>
+					</tr>
+					<tr>
+						<td>16</td>
+						<td>Remove currency XCD (already existing in file)</td>
+						<td class="pass">Passed</td>
+						<td>Currency removed from XML file.</td>
+					</tr>
+					<tr>
+						<td>17</td>
+						<td>Remove currency XCD (no longer existing in file)</td>
+						<td class="pass">Passed</td>
+						<td>Error message 2200 was returned.</td>
+					</tr>
+				</table>
+			</section>
+			<section>
+				<a class="anchor" name="links"></a>
+				<h2>Links</h2>
+				<div class="links">
+					<div class="group">
+						<h3>Links to Services</h3>
+						<ul>
+							<li><a target="_blank" href="../?from=GBP&to=EUR&amnt=10.35&format=xml">Convert 10.35 from GBP to EUR and format as XML</a></li>
+							<li><a target="_blank" href="../?from=USD&to=CAD&amnt=9.71&format=json">Convert 9.71 from USD to CAD and format as JSON</a></li>
+							<li><a target="_blank" href="../currPut.php?code=XCD">Add XCD in to rates file</a></li>
+							<li><a target="_blank" href="../currPost.php?code=XCD&rate=1.5">Edit XCD rate to 1.5</a></li>
+							<li><a target="_blank" href="../currDelete.php?code=XCD">Remove XCD from rates file</a></li>
+							<li><a target="_blank" href="../client.html">Client</a></li>
+						</ul>
+					</div>
+					<div class="group">
+						<h3>Links to Data Files</h3>
+						<ul>
+							<li><a target="_blank" href="../rates.xml">Rates file</a></li>
+							<li><a target="_blank" href="../currencies.xml">Currencies file</a></li>
+						</ul>
+					</div>
+					<div class="group">
+						<h3>Links to Source Files</h3>
+						<ul>
+							<li><a target="_blank" href="sources/index.phps">GET request file</a></li>
+							<li><a target="_blank" href="sources/currPut.phps">PUT request file</a></li>
+							<li><a target="_blank" href="sources/currPost.phps">POST request file</a></li>
+							<li><a target="_blank" href="sources/currDelete.phps">DELETE request file</a></li>
+							<li><a target="_blank" href="sources/include/inc_all.phps">File includes file</a></li>
+							<li><a target="_blank" href="sources/include/inc_rates.phps">Main API object class file</a></li>
+							<li><a target="_blank" href="sources/include/inc_error.phps">Error object class file</a></li>
+							<li><a target="_blank" href="sources/include/inc_config.phps">Configuration processing file</a></li>
+							<li><a target="_blank" href="sources/configuration.xml">Configuration file</a>
+						</ul>
+					</div>
+				</div>
+			</section>
+			<section>
+				<a class="anchor" name="evaluation"></a>
+				<h2>Critical Evaluation</h2>
+				<h3>Advantages and Disadvantages of REST compared to SOAP and XML RPC</h3>
+				<p>One of the key differences between REST, SOAP and XML RPC is that SOAP and XML RPC are both protocols, whereas REST is just a style of the system architecture.</p>
+				<p>In that main difference between the methods lies one of the key features of REST, that may be seen as both an advantage and disadvantage. While SOAP and XML RPC follow strict formats, both for requests and responses, REST does not need to adhere to any such standards. REST requests are very simply laid out as a resource with several parameters attached, and the responses take any format deemed suitably by the developer. Whilst this is good as it grants freedom to developers, it also means that there may not be a standard way of processing the responses expected by RESTful services.</p>
+				<p>As well as the freedom granted by not being required to follow such formats, this difference among other facts makes REST more easily accessible, with less knowledge of protocols required to create and use a request, whereas background knowledge would be required to successfully call a process using XML RPC, or to send a properly formatted SOAP request.</p>
+				<h3>Improving and Extending the Application</h3>
+				<p>One of the first ways in which I would look to improve the application would be to centralise the API, instead of having four different URLs associated with it. This could be achieved in two main ways, either by simply using the same file with different parameters, and using a method parameter to decide how to handle the request, or by sending the parameters using respective headers (POST, PUT and DELETE) rather than all as GET requests and then determining the method based on what headers were sent.</p>
+				<p>The application could also benefit from more closely relating the GET request to the PUT, POST and DELETE requests. As it is, several of the error messages associated with the latter three requests are never encountered, as the problems leading to them are first caught by the other set of error messages. These requests also use a different response format, where using the same format for every request would help to reduce the code put in to formatting them.</p>
+				<p>If the application was to be used on a wider scale, one improvement that would need to be made is to the use of the API used to retrieve exchange rates. Currently up to one thousand requests are permitted per month, which easily allows for a request every twelve hours to keep rates up to date, as well as requests needed when new currencies are added in, at the scale that the application is used. On a wider scale, the paid service could be considered to allow more requests, or the application could fetch all rates at all times, whether or not they are "stored" in the system, to avoid the need for extra requests when a currency is added to the system.</p>
+				<p>Another area in which the application may be improved is by adding fall-back solutions to retrieving exchange rates. Throughout the development of the project, there was an issue with the Yahoo Finance Xchange tables being removed, at which point it would have been beneficial for the application to make use of another service, once it has found the service to be offline.</p>
+				<h3>Promotion of Re-use</h3>
+				<p>The way in which the application has been built heavily promotes the re-use of components throughout itself, and for if it was to be adapted in the future. The application was built in an object oriented fashion in which all parts are broken down in to small and purposeful methods, which may be used in a broader range of situations, or may behave slightly different based on the context, where similar but not identical functionality is needed.</p>
+				<p>One example of the former is the method check_rates, which is used to establish conversion rates between different currencies, as well as in simply looking at the exchange rate of a currency on its own. In a similar vein, the method conversion_rate (which makes use of check_rate) is used in multiple scenarios, both to establish a resulting conversion, and to tell the rate between two currencies alone.</p>
+				<p>An example of the latter is the way in which the method currency_details behaves, based on what parameters are provided. This method includes an optional parameter, that when included will add an additional piece of information to the response, as well as providing a different tag name for one element. Similarly, the method update_rates behaves in two ways, either to simply fetch exchange rates for all existing currencies, and also to add a new exchange rate in to the data set, using an optional parameter again.</p>
+				<p>In a slightly less technical sense, re-use is also promoted by the thorough documentation of the code. In the case of the application being open source, or another developer attempting to work with it, the function headers and such allow for people to jump in at a glance without having to understand some of the finer details of the code.</p>
+			</section>
+		</main>
+	</body>
+</html>
