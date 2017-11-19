@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<base>GBP</base>
+	<default_format>xml</default_format>
+	<rates_data>rates.xml</rates_data>
+	<currencies_data>currencies.xml</currencies_data>
+	<rates_source>https://openexchangerates.org/api/latest.json?app_id=</rates_source>
+	<rates_key>02fbc5ce69e243d58ed2311fddd513d2</rates_key>
+	<currencies_source>https://www.currency-iso.org/dam/downloads/lists/list_one.xml</currencies_source>
+	<default_currencies>
+		<currency>CAD</currency>
+		<currency>CHF</currency>
+		<currency>CNY</currency>
+		<currency>DKK</currency>
+		<currency>EUR</currency>
+		<currency>GBP</currency>
+		<currency>HKD</currency>
+		<currency>HUF</currency>
+		<currency>INR</currency>
+		<currency>JPY</currency>
+		<currency>MXN</currency>
+		<currency>MYR</currency>
+		<currency>NOK</currency>
+		<currency>NZD</currency>
+		<currency>PHP</currency>
+		<currency>RUB</currency>
+		<currency>SEK</currency>
+		<currency>SGD</currency>
+		<currency>THB</currency>
+		<currency>TRY</currency>
+		<currency>USD</currency>
+		<currency>ZAR</currency>
+	</default_currencies>
+</configuration>
