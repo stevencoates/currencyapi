@@ -14,6 +14,7 @@
 				<a href="#tests">Test Outcomes</a>
 				<a href="#links">Links</a>
 				<a href="#evaluation">Critical Evaluation</a>
+				<a href="#other">Other Comments</a>
 			</nav>
 		</header>
 		<main>
@@ -222,6 +223,15 @@
 				<p>One example of the former is the method check_rates, which is used to establish conversion rates between different currencies, as well as in simply looking at the exchange rate of a currency on its own. In a similar vein, the method conversion_rate (which makes use of check_rate) is used in multiple scenarios, both to establish a resulting conversion, and to tell the rate between two currencies alone.</p>
 				<p>An example of the latter is the way in which the method currency_details behaves, based on what parameters are provided. This method includes an optional parameter, that when included will add an additional piece of information to the response, as well as providing a different tag name for one element. Similarly, the method update_rates behaves in two ways, either to simply fetch exchange rates for all existing currencies, and also to add a new exchange rate in to the data set, using an optional parameter again.</p>
 				<p>In a slightly less technical sense, re-use is also promoted by the thorough documentation of the code. In the case of the application being open source, or another developer attempting to work with it, the function headers and such allow for people to jump in at a glance without having to understand some of the finer details of the code.</p>
+			</section>
+			<section>
+				<a class="anchor" name="other"></a>
+				<h2>Other Comments</h2>
+				<p>The application delivered has deviated slightly from what was originally specified, based on certain inconsistencies or later made decisions.</p>
+				<p>The PUT, POST and DELETE requests mention an invalid method being provided, though due to the fact that each request type uses a separate file, there is no need for the method to be passed in. Since no specific request format was given for these methods, the method parameter was simply omitted. If the four requests were handled in the same file, and such a parameter was required it would be a trivial change to make to the code.</p>
+				<p>When a PUT request is made, if the currency already exists in the file, no changes will be made to the currencies included, though a response will be given as though a successful PUT request was completed. This was based on the fact that the end result of the two actions remains the same, with the currency at the end being a valid currency within the rates file, and so this response was provided to avoid any needless confusion.</p>
+				<p>Though the error messages have all been implemented, not all of them are ever encountered. One of them is mentioned above (2000 - Method not recognized), though several others (all from the PUT, POST and DELETE requests, beginning with 2) are also not made use of, mainly due to the fact that the problems are caught earlier by the first set of error messages.</p>
+				<p>The application was built in an object oriented manner, despite functional programming being mentioned as the most likely optimal way of it being completed. This decision was made based on the fact that all of the information used throughout the system is based on the same sets of data, which may be held and made use of in an object, and the object oriented approach made it very easy to be broken down in to small and manageable chunks.</p>
 			</section>
 		</main>
 	</body>
