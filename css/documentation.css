@@ -1,0 +1,135 @@
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+html, body {
+	min-height: 100vh;
+	overflow: auto;
+	font-family: sans-serif;
+}
+
+body, header, main {
+	color: #333;
+	background: #EEE;
+	position: relative;
+	margin: 0 auto;
+	max-width: 960px;
+	width: 100%;
+}
+
+header {
+	height: 120px;
+	z-index: 1;
+	position: fixed;
+	padding-top: 25px;
+}
+
+main {
+	margin-top: 130px;
+}
+
+nav {
+	width: 100%;
+	background: #333;
+	padding: 10px;
+	bottom: 0;
+	position: absolute;
+	display: flex;
+	justify-content: space-between;
+}
+
+nav a,
+nav a:visited,
+nav a:hover,
+nav a:active {
+	color: #EEE;
+}
+
+.group a,
+.group a:visited,
+.group a:hover,
+.group a:active {
+	color: #33C;
+}
+
+a,
+a:visited,
+a:hover,
+a:active {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+section:not(:last-child) {
+	margin-bottom: 20px;
+}
+
+h1,
+h2,
+h3,
+p,
+ul,
+table {
+	margin-bottom: 10px;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table, th, td {
+	border: 1px solid black;
+	padding: 5px;
+	vertical-align: top;
+}
+
+td.pass {
+	color: green;
+}
+
+td.fail {
+	color: red;
+}
+
+td:nth-child(1) {
+	text-align: center;
+}
+
+td:nth-child(2) {
+	width: 50%;
+}
+
+td:nth-child(3) {
+	text-align: center;
+	width: 100px;
+}
+
+th[colspan] {
+	font-size: 1.1em;
+}
+
+.anchor {
+	display: block;
+	position: relative;
+	visibility: hidden;
+	top: -130px;
+}
+
+.links {
+	display: flex;
+	justify-content: space-between;
+}
+
+.group {
+	display: inline-block;
+	width: 30%;
+}
+
+.group ul {
+	list-style-type: none;
+}
